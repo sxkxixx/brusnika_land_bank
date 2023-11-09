@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "land-bank"
+version = "0.1.0"
+description = "Brusnika's Land Bank, UrFU Project"
+authors = ["sxkxixx <sasha.kornilov.1212@gmail.com>"]
+readme = "README.md"
+packages = [{include = "land_bank"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = "^0.104.1"
+uvicorn = "^0.24.0.post1"
+gunicorn = "^21.2.0"
+fastapi-jsonrpc = "^3.0.0"
+sqlalchemy = "^2.0.23"
+python-dotenv = "^1.0.0"
+alembic = "^1.12.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
