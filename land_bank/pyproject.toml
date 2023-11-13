@@ -15,6 +15,11 @@ fastapi-jsonrpc = "^3.0.0"
 sqlalchemy = "^2.0.23"
 python-dotenv = "^1.0.0"
 alembic = "^1.12.1"
+pydantic = {extras = ["email"], version = "^2.4.2"}
+asyncpg = "^0.29.0"
+passlib = "^1.7.4"
+python-jose = "^3.3.0"
+aioredis = "^2.0.1"
 
 
 [build-system]

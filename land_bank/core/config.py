@@ -21,3 +21,7 @@ class Config:
     ACCESS_TOKEN_TTL_MINUTES: int = int(os.getenv('ACCESS_TOKEN_TTL_MINUTES'))
     REFRESH_TOKEN_TTL_DAYS: int = int(os.getenv('REFRESH_TOKEN_TTL_DAYS'))
     ALGORITHM: str = os.getenv('ALGORITHM')
+
+    # Redis
+    REDIS_HOST: str = os.getenv('REDIS_HOST')
+    REDIS_PORT: int = int(os.getenv('REDIS_PORT'))
