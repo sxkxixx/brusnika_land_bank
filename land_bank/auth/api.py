@@ -39,12 +39,12 @@ async def login_user(
     )
     access_token = TokenService(employee).get_access_token()
     refresh_token = await RefreshSession(employee.id, user_agent).push()
-    ttl = datetime.now() + timedelta(days=Config.REFRESH_TOKEN_TTL_DAYS)
+    ttl = int((datetime.now() + timedelta(days=Config.REFRESH_TOKEN_TTL_DAYS)).timestamp())
     response.set_cookie(
         'refresh_token',
         refresh_token,
         expires=ttl,
-        max_age=int(ttl.timestamp()),
+        max_age=ttl,
         httponly=True
     )
     return TokenResponseSchema(
@@ -67,13 +67,13 @@ async def refresh_session(
         Employee.id == session.user_id
     )
     access_token = TokenService(employee).get_access_token()
-    ttl = datetime.now() + timedelta(days=Config.REFRESH_TOKEN_TTL_DAYS)
+    ttl = int((datetime.now() + timedelta(days=Config.REFRESH_TOKEN_TTL_DAYS)).timestamp())
     refresh_token = await RefreshSession(employee.id, user_agent).push()
     response.set_cookie(
         'refresh_token',
         refresh_token,
         expires=ttl,
-        max_age=int(ttl.timestamp()),
+        max_age=ttl,
         httponly=True
     )
     return TokenResponseSchema(
@@ -92,11 +92,11 @@ async def logout(
     session = await RefreshSession.get_by_key(refresh_token)
     if session.user_agent != user_agent:
         raise AuthorizationError(data='User-Agent is incorrect')
-    if session.user_id != user.id:
+    if session.user_id != user.id.__str__():
         raise AuthorizationError(data='Refresh Token is stolen')
     await session.delete(refresh_token)
     response.delete_cookie(refresh_token, httponly=True)
     return TokenResponseSchema(
         access_token=None,
-        refresh_token='Removed from cookie'
+        refresh_token_info='Removed from cookie'
     )

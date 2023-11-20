@@ -1,5 +1,7 @@
 from typing import Type, Iterable
-from sqlalchemy.ext.asyncio import AsyncSession
+
+from sqlalchemy import select
+from core import async_session
 from .base import BaseRepository
 
 
@@ -7,26 +9,21 @@ class SQLAlchemyRepository(BaseRepository):
     _model = None
     model_type = Type['_model']
 
-    def __init__(self, async_session: AsyncSession):
-        self.session: AsyncSession = async_session
-
     async def create_record(self, **kwargs) -> model_type:
-        record = self._model(**kwargs)
-        self.session.add(record)
+        async with async_session() as session:
+            record = self._model(**kwargs)
+            session.add(record)
+            await session.commit()
         return record
 
-    async def get_record(self, *args, **kwargs) -> model_type:
-        pass
+    async def get_record(self, *filters) -> model_type:
+        async with async_session() as session:
+            statement = select(self._model).where(*filters)
+            result = await session.scalar(statement)
+        return result
 
     async def select_records(self, *args, **kwargs) -> Iterable[model_type]:
         pass
 
     async def update_record(self, *args, **kwargs) -> model_type:
         pass
-
-    async def commit(self):
-        await self.session.commit()
-
-    async def rollback(self):
-        await self.session.rollback()
-        await self.session.close()

@@ -1,13 +1,11 @@
 import os
 from dotenv import load_dotenv
 
-if int(os.getenv('DEBUG')):
-    load_dotenv()
+load_dotenv()
 
 
 class Config:
     # Application config
-    DEBUG: bool = bool(int(os.getenv('DEBUG')))
 
     # Database config
     POSTGRES_DB: str = os.getenv('POSTGRES_DB')

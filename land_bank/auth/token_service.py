@@ -13,7 +13,7 @@ class TokenService:
             'email': user.email,
             'last_name': user.last_name,
             'first_name': user.first_name,
-            'dp_id': user.department_id.__str__(),
+            'department_id': user.department_id.__str__(),
         }
 
     @property
@@ -31,7 +31,7 @@ class TokenService:
     def __get_encode_token(self, ttl: timedelta) -> str:
         data = self.__data.copy()
         expires_in = datetime.now() + ttl
-        data.update({'expires_in': expires_in})
+        data.update({'exp': expires_in, 'sub': 'access_token'})
         return jwt.encode(
             data,
             key=Config.SECRET_KEY,

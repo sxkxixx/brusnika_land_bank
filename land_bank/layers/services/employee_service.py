@@ -15,8 +15,7 @@ class EmployeeService:
             self,
             repository: Type[Union[BaseRepository, SQLAlchemyRepository]]
     ):
-        session = async_session()
-        self.repository = repository(session)
+        self.repository = repository()
 
     async def create_employee(self, data: Union[Dict, BaseModel]) -> Employee:
         if isinstance(data, BaseModel):
@@ -32,9 +31,7 @@ class EmployeeService:
                 phone_number=data.get('phone_number'),
                 tg_username=data.get('tg_username'),
             )
-            await self.repository.commit()
         except IntegrityError:
-            await self.repository.rollback()
             raise UniqueEmailError()
         return employee
 
@@ -43,7 +40,7 @@ class EmployeeService:
             password: str,
             *filters
     ) -> Employee:
-        employee: Employee = self.repository.get_record(*filters)
+        employee: Employee = await self.repository.get_record(*filters)
         if employee is None:
             raise LoginError(data='User is missed')
         if not Hasher.verify_password(password, employee.hashed_password):
@@ -51,7 +48,7 @@ class EmployeeService:
         return employee
 
     async def get_employee(self, *filters) -> Optional[Employee]:
-        employee: Employee = self.repository.get_record(*filters)
+        employee: Employee = await self.repository.get_record(*filters)
         if employee is None:
             return None
         return employee
