@@ -17,3 +17,7 @@ class BaseRepository(ABC):
     @abstractmethod
     def update_record(self, *args, **kwargs):
         raise NotImplementedError()
+
+    @abstractmethod
+    def get_record_with_relationships(self, *args, **kwargs):
+        raise NotImplementedError()

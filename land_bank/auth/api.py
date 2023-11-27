@@ -2,22 +2,31 @@ from datetime import datetime, timedelta
 from typing import Annotated
 
 import fastapi_jsonrpc as jsonrpc
-from fastapi import Depends, Header, Cookie, Response
+from fastapi import Depends, Header, Cookie, Response, File, UploadFile
 
 from core import Config
-from core.rpc_exceptions import AuthorizationError
+from core.rpc_exceptions import (
+    AuthorizationError,
+    LoginError,
+    UniqueEmailError
+)
+from .schemas import (
+    EmployeeCreateSchema,
+    EmployeeReadSchema,
+    EmployeeLoginSchema,
+    TokenResponseSchema
+)
 from .dependencies import AuthDependency
 from .models import Employee
 from .refresh_session import RefreshSession
-from .schemas import EmployeeCreateSchema, EmployeeReadSchema, \
-    EmployeeLoginSchema, TokenResponseSchema
-from layers import EmployeeService, employee_service
+from layers import EmployeeService, employee_service, S3Service
 from .token_service import TokenService
 
 auth_application = jsonrpc.Entrypoint(path='/api/v1/auth')
+s3_service = S3Service()
 
 
-@auth_application.method()
+@auth_application.method(errors=[UniqueEmailError])
 async def register_user(
         user: EmployeeCreateSchema,
         _employee_service: EmployeeService = Depends(employee_service)
@@ -26,7 +35,7 @@ async def register_user(
     return employee.to_schema
 
 
-@auth_application.method()
+@auth_application.method(errors=[LoginError])
 async def login_user(
         login_data: EmployeeLoginSchema,
         user_agent: Annotated[str, Header()],
@@ -39,20 +48,14 @@ async def login_user(
     )
     access_token = TokenService(employee).get_access_token()
     refresh_token = await RefreshSession(employee.id, user_agent).push()
-    ttl = int((datetime.now() + timedelta(days=Config.REFRESH_TOKEN_TTL_DAYS)).timestamp())
-    response.set_cookie(
-        'refresh_token',
-        refresh_token,
-        expires=ttl,
-        max_age=ttl,
-        httponly=True
-    )
-    return TokenResponseSchema(
-        access_token=access_token,
-    )
+    ttl = int((datetime.now() + timedelta(
+        days=Config.REFRESH_TOKEN_TTL_DAYS)).timestamp())
+    response.set_cookie('refresh_token', refresh_token,
+                        expires=ttl, max_age=ttl, httponly=True)
+    return TokenResponseSchema(access_token=access_token)
 
 
-@auth_application.method()
+@auth_application.method(errors=[AuthorizationError])
 async def refresh_session(
         response: Response,
         user_agent: Annotated[str, Header()],
@@ -67,7 +70,8 @@ async def refresh_session(
         Employee.id == session.user_id
     )
     access_token = TokenService(employee).get_access_token()
-    ttl = int((datetime.now() + timedelta(days=Config.REFRESH_TOKEN_TTL_DAYS)).timestamp())
+    ttl = int((datetime.now() + timedelta(
+        days=Config.REFRESH_TOKEN_TTL_DAYS)).timestamp())
     refresh_token = await RefreshSession(employee.id, user_agent).push()
     response.set_cookie(
         'refresh_token',
@@ -76,13 +80,10 @@ async def refresh_session(
         max_age=ttl,
         httponly=True
     )
-    return TokenResponseSchema(
-        access_token=access_token,
-        refresh_token=refresh_token,
-    )
+    return TokenResponseSchema(access_token=access_token)
 
 
-@auth_application.method()
+@auth_application.method(errors=[AuthorizationError])
 async def logout(
         response: Response,
         user_agent: Annotated[str, Header()],
@@ -96,7 +97,18 @@ async def logout(
         raise AuthorizationError(data='Refresh Token is stolen')
     await session.delete(refresh_token)
     response.delete_cookie(refresh_token, httponly=True)
-    return TokenResponseSchema(
-        access_token=None,
-        refresh_token_info='Removed from cookie'
-    )
+    return TokenResponseSchema(access_token=None)
+
+
+@auth_application.post('/api/v1/upload_user_avatar')
+async def set_employee_photo(
+        employee: Employee = Depends(AuthDependency()),
+        _employee_service: EmployeeService = Depends(employee_service),
+        file: UploadFile = File(...),
+) -> jsonrpc.JsonRpcResponse:
+    # TODO написать валидацию и попробовать получать файл в виде потока.
+    file_name = await s3_service.upload_file(file)
+    await _employee_service.set_employee_photo(employee, file_name)
+    pre_signed_url = await s3_service.get_pre_signed_url(file_name=file_name)
+    response = jsonrpc.JsonRpcResponse(result=pre_signed_url)
+    return response

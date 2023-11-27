@@ -1,5 +1,6 @@
 import re
 from typing import Optional, Union
+from uuid import UUID
 
 from pydantic import (
     BaseModel,
@@ -26,7 +27,6 @@ class EmployeeCreateSchema(EmployeeLoginSchema):
     first_name: str
     patronymic: Optional[str] = None
     phone_number: Optional[str] = None
-    tg_username: str
 
     @model_validator(mode='after')
     def validate_passwords(self):
@@ -69,32 +69,30 @@ class EmployeeCreateSchema(EmployeeLoginSchema):
             return field
         return field.capitalize()
 
-    @field_validator('tg_username', mode='after')
-    @classmethod
-    def validate_tg_username(cls, field: str):
-        if not field.startswith('@'):
-            raise ValueError(
-                f'Telegram username must starts with "@"'
-            )
-        return field
-
 
 class EmployeeReadSchema(BaseModel):
+    id: UUID
     email: EmailStr
     last_name: str
     first_name: str
     patronymic: Optional[str] = None
     phone_number: Optional[str] = None
-    tg_username: str
+    s3_avatar_file: Optional[str] = None
+    position_id: Optional[UUID] = None
+    department_id: Optional[UUID] = None
+    director_id: Optional[UUID] = None
 
     @classmethod
     def from_model(cls, model):
         return cls(
+            id=model.id,
             email=model.email,
             last_name=model.last_name,
             first_name=model.first_name,
             patronymic=model.patronymic,
             phone_number=model.phone_number,
-            tg_username=model.tg_username,
+            s3_avatar_file=model.s3_avatar_file,
+            position_id=model.position_id,
+            department_id=model.department_id,
+            director_id=model.director_id,
         )
-

@@ -23,3 +23,9 @@ class Config:
     # Redis
     REDIS_HOST: str = os.getenv('REDIS_HOST')
     REDIS_PORT: int = int(os.getenv('REDIS_PORT'))
+
+    AWS_ACCESS_KEY_ID: str = os.getenv('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY: str = os.getenv('AWS_SECRET_ACCESS_KEY')
+    REGION_NAME: str = os.getenv('REGION_NAME')
+    BUCKET_NAME: str = os.getenv('BUCKET_NAME')
+    S3_ENDPOINT_URL: str = os.getenv('S3_ENDPOINT_URL')

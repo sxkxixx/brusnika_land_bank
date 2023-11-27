@@ -30,7 +30,7 @@ class TokenService:
 
     def __get_encode_token(self, ttl: timedelta) -> str:
         data = self.__data.copy()
-        expires_in = datetime.now() + ttl
+        expires_in = datetime.utcnow() + ttl
         data.update({'exp': expires_in, 'sub': 'access_token'})
         return jwt.encode(
             data,

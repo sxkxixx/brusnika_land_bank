@@ -1,6 +1,7 @@
 from sqlalchemy.exc import IntegrityError
 from typing import Type, Union, Dict, Optional
 from pydantic import BaseModel
+from sqlalchemy.orm import selectinload
 
 from layers.repositories import BaseRepository, SQLAlchemyRepository
 from core.rpc_exceptions import UniqueEmailError, LoginError
@@ -29,7 +30,6 @@ class EmployeeService:
                 first_name=data.get('first_name'),
                 patronymic=data.get('patronymic'),
                 phone_number=data.get('phone_number'),
-                tg_username=data.get('tg_username'),
             )
         except IntegrityError:
             raise UniqueEmailError()
@@ -53,4 +53,20 @@ class EmployeeService:
             return None
         return employee
 
+    async def get_with_position(self, *filters) -> Optional[Employee]:
+        employee: Employee = await self.repository.get_record_with_relationships(
+            filters=filters, options=[selectinload(Employee.position)]
+        )
+        if employee is None:
+            return None
+        return employee
 
+    async def set_employee_photo(
+            self,
+            employee: Employee,
+            filename: str
+    ) -> Employee:
+        return await self.repository.update_record(
+            Employee.id == employee.id, Employee.email == employee.email,
+            s3_avatar_file=filename
+        )
