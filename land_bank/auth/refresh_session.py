@@ -4,7 +4,7 @@ from uuid import uuid4, UUID
 from typing import Union
 
 from core import redis, Config
-from core.rpc_exceptions import AuthorizationError
+from core.rpc_exceptions import AuthenticationError
 
 
 class RefreshSession:
@@ -44,7 +44,7 @@ class RefreshSession:
     async def get_by_key(cls, key: str) -> 'RefreshSession':
         encoded_data = await redis.get(key)
         if encoded_data is None:
-            raise AuthorizationError(data='Session has expired, login again')
+            raise AuthenticationError(data='Session has expired, login again')
         data = cls.__from_str(encoded_data)
         return cls(**data)
 

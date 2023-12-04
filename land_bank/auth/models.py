@@ -58,7 +58,7 @@ class Employee(Base):
     )
 
     employee_head: Mapped['Employee'] = relationship(
-        'Employee', back_populates='subordinates'
+        'Employee', back_populates='subordinates', remote_side='Employee.id'
     )
     subordinates: Mapped[List['Employee']] = relationship(
         'Employee', back_populates='employee_head'
@@ -68,7 +68,7 @@ class Employee(Base):
         'Position', back_populates='employees'
     )
     department: Mapped['Department'] = relationship(
-        'Department', back_populates='employee'
+        'Department', back_populates='employees'
     )
 
     @property

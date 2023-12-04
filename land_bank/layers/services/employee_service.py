@@ -3,18 +3,17 @@ from typing import Type, Union, Dict, Optional
 from pydantic import BaseModel
 from sqlalchemy.orm import selectinload
 
-from layers.repositories import BaseRepository, SQLAlchemyRepository
+from layers.repositories import BaseRepository, SQLAlchemyRepositoryV1
 from core.rpc_exceptions import UniqueEmailError, LoginError
 from auth.models import Employee
 
-from core import async_session
 from utils import Hasher
 
 
 class EmployeeService:
     def __init__(
             self,
-            repository: Type[Union[BaseRepository, SQLAlchemyRepository]]
+            repository: Type[Union[BaseRepository, SQLAlchemyRepositoryV1]]
     ):
         self.repository = repository()
 
@@ -69,4 +68,17 @@ class EmployeeService:
         return await self.repository.update_record(
             Employee.id == employee.id, Employee.email == employee.email,
             s3_avatar_file=filename
+        )
+
+    async def get_full_profile(self, employee: Employee) -> Employee:
+        return await self.repository.get_record_with_relationships(
+            filters=[
+                Employee.id == employee.id,
+                Employee.email == employee.email
+            ],
+            options=[
+                selectinload(Employee.employee_head),
+                selectinload(Employee.position),
+                selectinload(Employee.department)
+            ]
         )

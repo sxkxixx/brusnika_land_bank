@@ -1,11 +1,11 @@
-from typing import Type, Iterable
+from typing import Iterable
 
 from sqlalchemy import select, update
 from core import async_session
 from .base import BaseRepository
 
 
-class SQLAlchemyRepository(BaseRepository):
+class SQLAlchemyRepositoryV1(BaseRepository):
     _model = None
 
     async def create_record(self, **kwargs) -> _model:

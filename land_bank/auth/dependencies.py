@@ -3,7 +3,7 @@ from fastapi import Header
 
 from .token_service import TokenService
 from .models import Employee
-from core.rpc_exceptions import AuthorizationError
+from core.rpc_exceptions import AuthenticationError
 from layers import EmployeeService, employee_service
 from jose import JWTError
 
@@ -26,13 +26,13 @@ class AuthDependency:
         try:
             payload = TokenService.get_token_payload(access_token)
         except JWTError as error:
-            raise AuthorizationError(
+            raise AuthenticationError(
                 data=f'Access Token has expired. {error.args}')
         employee: Optional[Employee] = await self.service.get_employee(
             Employee.email == payload.get('email')
         )
         if employee is None:
-            raise AuthorizationError(data='Access Token is invalid')
+            raise AuthenticationError(data='Access Token is invalid')
         return employee
 
     async def __soft_auth(
@@ -43,5 +43,5 @@ class AuthDependency:
             return None
         try:
             return await self.__strict_auth(access_token)
-        except AuthorizationError:
+        except AuthenticationError:
             return None

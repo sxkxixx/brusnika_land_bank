@@ -12,7 +12,10 @@ from pydantic import (
 __all__ = [
     'EmployeeLoginSchema',
     'EmployeeCreateSchema',
-    'EmployeeReadSchema'
+    'EmployeeReadSchema',
+    'EmployeeRelationsResponse',
+    'DepartmentReadSchema',
+    'PositionReadSchema'
 ]
 
 
@@ -78,9 +81,8 @@ class EmployeeReadSchema(BaseModel):
     patronymic: Optional[str] = None
     phone_number: Optional[str] = None
     s3_avatar_file: Optional[str] = None
-    position_id: Optional[UUID] = None
+    position_id: Optional[int] = None
     department_id: Optional[UUID] = None
-    director_id: Optional[UUID] = None
 
     @classmethod
     def from_model(cls, model):
@@ -94,5 +96,25 @@ class EmployeeReadSchema(BaseModel):
             s3_avatar_file=model.s3_avatar_file,
             position_id=model.position_id,
             department_id=model.department_id,
-            director_id=model.director_id,
         )
+
+
+class PositionReadSchema(BaseModel):
+    id: int
+    position_name: str
+    is_director_position: bool
+
+
+class DepartmentReadSchema(BaseModel):
+    id: UUID
+    department_name: str
+
+
+class EmployeeRelationsResponse(EmployeeReadSchema):
+    employee_head: Optional[EmployeeReadSchema] = None
+    position: Optional['PositionReadSchema'] = None
+    department: Optional['DepartmentReadSchema'] = None
+
+    @classmethod
+    def from_model(cls, model):
+        return cls.model_validate(model, from_attributes=True)
