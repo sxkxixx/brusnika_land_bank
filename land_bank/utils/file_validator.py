@@ -15,9 +15,10 @@ class FileValidator:
         result: bool = False
         try:
             data = await file.read(32)
+            hex_data = ' '.join(['{:02X}'.format(byte) for byte in data])
             file_extends = self.__get_file_extends(file.content_type)
             for signature in self.SIGNATURES.get(file_extends):
-                if signature in data:
+                if signature in hex_data:
                     result = True
                     break
         finally:
