@@ -1,4 +1,4 @@
-version: '3'
+version: '2.1'
 
 services:
   backend:
@@ -7,7 +7,7 @@ services:
       - '8000:8000'
     restart: always
     env_file:
-      - .env.backend.prod
+      - backend.prod.env
     depends_on:
       database:
         condition: service_healthy
@@ -19,16 +19,16 @@ services:
     image: postgres:15-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    env_file:
-      - .env.database
-    environment:
-      - POSTGRES_DB = "${POSTGRES_DB}"
-      - POSTGRES_USER = "${POSTGRES_USER}"
-      - POSTGRES_PASSWORD = "${POSTGRES_PASSWORD}"
     ports:
       - "5432:5432"
+#    env_file:
+#      - database.env
+    environment:
+      - POSTGRES_DB=land_bank
+      - POSTGRES_USER=land_bank_admin
+      - POSTGRES_PASSWORD=berry_postgres
     healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}" ]
+      test: [ "CMD", "pg_isready", "-U", "land_bank_admin", "-d", "land_bank" ]
       interval: 5s
       retries: 10
     networks:

@@ -14,4 +14,4 @@ RUN pip install poetry && \
 
 RUN chmod a+x ./run_application.sh
 
-ENTRYPOINT ["./run_application.sh"]
+ENTRYPOINT ["sh", "./run_application.sh"]
