@@ -29,3 +29,11 @@ class Config:
     REGION_NAME: str = os.getenv('REGION_NAME')
     BUCKET_NAME: str = os.getenv('BUCKET_NAME')
     S3_ENDPOINT_URL: str = os.getenv('S3_ENDPOINT_URL')
+
+    FRONTEND_HOST: str = os.getenv('FRONTEND_HOST')
+
+    print(POSTGRES_DB,
+          POSTGRES_HOST,
+          POSTGRES_PORT,
+          POSTGRES_USER,
+          POSTGRES_PASSWORD)

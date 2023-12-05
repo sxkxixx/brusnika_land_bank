@@ -31,7 +31,7 @@ async def register_user(
         _employee_service: EmployeeService = Depends(employee_service)
 ) -> EmployeeReadSchema:
     employee: Employee = await _employee_service.create_employee(user)
-    return employee.to_schema
+    return EmployeeReadSchema.model_validate(employee, from_attributes=True)
 
 
 @auth_application.method(errors=[rpc_exceptions.LoginError])
@@ -111,16 +111,18 @@ async def get_employee_profile_info(
     return EmployeeRelationsResponse.from_model(employee)
 
 
-@auth_application.post('/api/v1/upload_user_avatar')
+@auth_application.post(
+    '/api/v1/upload_user_avatar',
+    description="REST-запрос, передача файла происходит с помощью JavaScript FormData или аналога в TS"
+)
 async def set_employee_photo(
         employee: Employee = Depends(AuthDependency()),
         _employee_service: EmployeeService = Depends(employee_service),
         file: UploadFile = File(...),
 ) -> jsonrpc.JsonRpcResponse:
     # print(type(file)) -> returns starlette.datastructures.UploadFile
-    if not file_validator.is_valid_file(file):
+    if not await file_validator.is_valid_file(file):
         raise rpc_exceptions.ValidationFileError()
-    # TODO попробовать получать файл в виде потока.
     file_name = await s3_service.upload_file(file)
     await _employee_service.set_employee_photo(employee, file_name)
     pre_signed_url = await s3_service.get_pre_signed_url(file_name=file_name)

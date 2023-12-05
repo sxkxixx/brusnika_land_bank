@@ -4,7 +4,7 @@ from fastapi_jsonrpc import BaseError
 # Codes since 32001
 
 class UniqueEmailError(BaseError):
-    """Ошибка вызывается при попытке регистрации пользователя"""
+    """Ошибка вызывается, если при регистрации указан emailб который уже есть в БД (IntegrityError)"""
 
     CODE = -32001
     MESSAGE = 'User with current email already exists'

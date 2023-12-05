@@ -26,7 +26,7 @@ class S3Service:
         ) as client:
             file_name = self.__get_unique_file_name(file.filename)
             await client.upload_fileobj(
-                file_name,
+                file,
                 Config.BUCKET_NAME,
                 file_name
             )

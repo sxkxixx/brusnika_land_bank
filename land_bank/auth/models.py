@@ -71,10 +71,6 @@ class Employee(Base):
         'Department', back_populates='employees'
     )
 
-    @property
-    def to_schema(self) -> EmployeeReadSchema:
-        return EmployeeReadSchema.from_model(self)
-
 
 class Department(Base):
     __tablename__ = 'land_bank_department'

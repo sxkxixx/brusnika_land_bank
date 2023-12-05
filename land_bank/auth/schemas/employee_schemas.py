@@ -84,20 +84,6 @@ class EmployeeReadSchema(BaseModel):
     position_id: Optional[int] = None
     department_id: Optional[UUID] = None
 
-    @classmethod
-    def from_model(cls, model):
-        return cls(
-            id=model.id,
-            email=model.email,
-            last_name=model.last_name,
-            first_name=model.first_name,
-            patronymic=model.patronymic,
-            phone_number=model.phone_number,
-            s3_avatar_file=model.s3_avatar_file,
-            position_id=model.position_id,
-            department_id=model.department_id,
-        )
-
 
 class PositionReadSchema(BaseModel):
     id: int
