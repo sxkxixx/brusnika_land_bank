@@ -5,7 +5,8 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from core import Config
-from auth.models import Employee, Department
+from auth.models import *
+from bank.models import *
 from alembic import context
 
 # this is the Alembic Config object, which provides

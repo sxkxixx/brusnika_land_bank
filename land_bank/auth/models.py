@@ -4,107 +4,159 @@ from uuid import UUID
 import sqlalchemy
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from auth.schemas import EmployeeReadSchema
 from core import Base
+
+__all__ = [
+	'Employee',
+	'Position',
+	'Department'
+]
 
 
 class Employee(Base):
-    """
-    Модель данных: "Сотрудник Земельного Банка"
-    """
-    __tablename__ = 'land_bank_employee'
+	"""
+	Модель данных: "Сотрудник Земельного Банка"
+	"""
+	__tablename__ = 'land_bank_employee'
 
-    id: Mapped[UUID] = mapped_column(
-        sqlalchemy.UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
-    email: Mapped[str] = mapped_column(
-        sqlalchemy.String(length=64),
-        nullable=False, unique=True, index=True
-    )
-    hashed_password: Mapped[str] = mapped_column(
-        sqlalchemy.String(length=128), nullable=False
-    )
-    last_name: Mapped[str] = mapped_column(
-        sqlalchemy.String(32), nullable=False
-    )
-    first_name: Mapped[str] = mapped_column(
-        sqlalchemy.String(32), nullable=False
-    )
-    patronymic: Mapped[str] = mapped_column(
-        sqlalchemy.String(32), nullable=True
-    )
-    phone_number: Mapped[str] = mapped_column(
-        sqlalchemy.String(20), nullable=True
-    )
-    s3_avatar_file: Mapped[str] = mapped_column(
-        sqlalchemy.String(64), nullable=True
-    )
-    position_id: Mapped[int] = mapped_column(
-        sqlalchemy.ForeignKey(
-            'land_bank_position.id', ondelete='RESTRICT'
-        ), nullable=True
-    )
-    department_id: Mapped[UUID] = mapped_column(
-        sqlalchemy.ForeignKey(
-            'land_bank_department.id', ondelete='RESTRICT'
-        ), nullable=True
-    )
-    employee_head_id: Mapped[UUID] = mapped_column(
-        sqlalchemy.ForeignKey(
-            'land_bank_employee.id', ondelete='RESTRICT'
-        ), nullable=True
-    )
+	id: Mapped[UUID] = mapped_column(
+		sqlalchemy.UUID(as_uuid=True),
+		primary_key=True,
+		default=uuid.uuid4,
+	)
+	email: Mapped[str] = mapped_column(
+		sqlalchemy.String(length=64),
+		nullable=False, unique=True, index=True
+	)
+	hashed_password: Mapped[str] = mapped_column(
+		sqlalchemy.String(length=128), nullable=False
+	)
+	last_name: Mapped[str] = mapped_column(
+		sqlalchemy.String(32), nullable=False
+	)
+	first_name: Mapped[str] = mapped_column(
+		sqlalchemy.String(32), nullable=False
+	)
+	patronymic: Mapped[str] = mapped_column(
+		sqlalchemy.String(32), nullable=True
+	)
+	phone_number: Mapped[str] = mapped_column(
+		sqlalchemy.String(20), nullable=True
+	)
+	s3_avatar_file: Mapped[str] = mapped_column(
+		sqlalchemy.String(64), nullable=True
+	)
+	position_id: Mapped[int] = mapped_column(
+		sqlalchemy.ForeignKey(
+			'land_bank_position.id', ondelete='RESTRICT'
+		), nullable=True
+	)
+	department_id: Mapped[UUID] = mapped_column(
+		sqlalchemy.ForeignKey(
+			'land_bank_department.id', ondelete='RESTRICT'
+		), nullable=True
+	)
+	employee_head_id: Mapped[UUID] = mapped_column(
+		sqlalchemy.ForeignKey(
+			'land_bank_employee.id', ondelete='RESTRICT'
+		), nullable=True
+	)
 
-    employee_head: Mapped['Employee'] = relationship(
-        'Employee', back_populates='subordinates', remote_side='Employee.id'
-    )
-    subordinates: Mapped[List['Employee']] = relationship(
-        'Employee', back_populates='employee_head'
-    )
+	employee_head: Mapped['Employee'] = relationship(
+		'Employee', back_populates='subordinates', remote_side='Employee.id'
+	)
+	subordinates: Mapped[List['Employee']] = relationship(
+		'Employee', back_populates='employee_head'
+	)
 
-    position: Mapped['Position'] = relationship(
-        'Position', back_populates='employees'
-    )
-    department: Mapped['Department'] = relationship(
-        'Department', back_populates='employees'
-    )
+	position: Mapped['Position'] = relationship(
+		'Position', back_populates='employees'
+	)
+	department: Mapped['Department'] = relationship(
+		'Department', back_populates='employees'
+	)
 
 
 class Department(Base):
-    __tablename__ = 'land_bank_department'
+	__tablename__ = 'land_bank_department'
 
-    id: Mapped[UUID] = mapped_column(
-        sqlalchemy.UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-    )
-    department_name: Mapped[str] = mapped_column(
-        sqlalchemy.String(64), unique=True, nullable=False
-    )
+	id: Mapped[UUID] = mapped_column(
+		sqlalchemy.UUID(as_uuid=True),
+		primary_key=True,
+		default=uuid.uuid4,
+	)
+	department_name: Mapped[str] = mapped_column(
+		sqlalchemy.String(64), unique=True, nullable=False
+	)
 
-    employees: Mapped[List['Employee']] = relationship(
-        'Employee', back_populates='department'
-    )
+	employees: Mapped[List['Employee']] = relationship(
+		'Employee', back_populates='department'
+	)
 
 
 class Position(Base):
-    __tablename__ = 'land_bank_position'
+	__tablename__ = 'land_bank_position'
 
-    id: Mapped[int] = mapped_column(
-        sqlalchemy.Integer,
-        primary_key=True,
-        autoincrement=True
-    )
-    position_name: Mapped[str] = mapped_column(
-        sqlalchemy.String(64), nullable=False,
-        unique=True
-    )
-    is_director_position: Mapped[bool] = mapped_column(
-        sqlalchemy.Boolean, default=False
-    )
+	id: Mapped[int] = mapped_column(
+		sqlalchemy.Integer,
+		primary_key=True,
+		autoincrement=True
+	)
+	position_name: Mapped[str] = mapped_column(
+		sqlalchemy.String(64), nullable=False,
+		unique=True
+	)
+	is_director_position: Mapped[bool] = mapped_column(
+		sqlalchemy.Boolean, default=False
+	)
 
-    employees: Mapped[List['Employee']] = relationship(
-        'Employee', back_populates='position'
-    )
+	employees: Mapped[List['Employee']] = relationship(
+		'Employee', back_populates='position'
+	)
+
+	permissions: Mapped[List['PermissionPosition']] = relationship(
+		'PermissionPosition', back_populates='position'
+	)
+
+
+class PermissionPosition(Base):
+	__tablename__ = 'permission_position'
+
+	id: Mapped[int] = mapped_column(
+		sqlalchemy.Integer,
+		primary_key=True
+	)
+	position_id: Mapped[int] = mapped_column(
+		sqlalchemy.ForeignKey('land_bank_position.id', ondelete='RESTRICT'),
+		nullable=False
+	)
+	permission_id: Mapped[int] = mapped_column(
+		sqlalchemy.ForeignKey('permissions.id', ondelete='CASCADE'),
+		nullable=False
+	)
+	position: Mapped['Position'] = relationship(
+		'Position', back_populates='permissions'
+	)
+	permission: Mapped['Permission'] = relationship(
+		'Permission', back_populates='positions'
+	)
+
+
+class Permission(Base):
+	__tablename__ = 'permissions'
+
+	id: Mapped[int] = mapped_column(
+		sqlalchemy.Integer,
+		primary_key=True,
+		autoincrement=True)
+	permission_name: Mapped[str] = mapped_column(
+		sqlalchemy.String(length=64),
+		unique=True
+	)
+
+	positions: Mapped[List['PermissionPosition']] = relationship(
+		'PermissionPosition', back_populates='permission'
+	)
+
+	def __str(self):
+		return f'Permission {self.permission_name=}'

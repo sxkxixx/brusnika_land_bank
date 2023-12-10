@@ -21,7 +21,7 @@ class AuthenticationError(BaseError):
     """Ошибка при аутентификации пользователя"""
 
     CODE = -32003
-    MESSAGE = 'Authorization Error'
+    MESSAGE = 'Authentication Error'
 
 
 class ValidationFileError(BaseError):
@@ -29,3 +29,15 @@ class ValidationFileError(BaseError):
 
     CODE = -32004
     MESSAGE = 'File signature is incorrect'
+
+
+class TransactionError(BaseError):
+    CODE = -32005
+    MESSAGE = 'Transaction Error'
+
+
+class AuthorizationError(BaseError):
+    """"""
+
+    CODE = -32006
+    MESSAGE = 'Authorization Error'
