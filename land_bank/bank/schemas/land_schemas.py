@@ -1,67 +1,95 @@
 from datetime import datetime
 from uuid import UUID
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional, List
+import re
 
 __all__ = [
-    'ObjectOwnerRequestDTO',
-    'CadastralLandAreaRequestDTO',
-    'AreaBuildingRequestDTO',
-    'CadastralLandAreaRelatedResponseDTO'
+	'OwnerRequestDTO',
+	'LandAreaRequestDTO',
+	'BuildingRequestDTO',
+	'LandAreaRelatedResponseDTO',
+	'LandAreaListResponseDTO',
+	'StageResponseDTO',
+	'StatusResponseDTO'
 ]
 
 
 class StageResponseDTO(BaseModel):
-    id: UUID
-    stage_name: str
+	id: UUID
+	stage_name: str
 
 
 class StatusResponseDTO(BaseModel):
-    id: UUID
-    status_name: str
+	id: UUID
+	status_name: str
 
 
-class ObjectOwnerRequestDTO(BaseModel):
-    owner_name: str
-    contact_name: Optional[str] = None
-    email: Optional[EmailStr] = None
-    phone_number: str
-    location: Optional[str] = None
-    person_type: str
-    # addition_mark: Optional[str] = None
+class OwnerRequestDTO(BaseModel):
+	name: Optional[str] = None
+	email: Optional[EmailStr] = None
+	phone_number: str
+	location: Optional[str] = None
 
 
-class ObjectOwnerResponseDTO(ObjectOwnerRequestDTO):
-    id: UUID
-    land_area_id: UUID
+class OwnerResponseDTO(OwnerRequestDTO):
+	id: UUID
+	land_area_id: UUID
 
 
-class AreaBuildingRequestDTO(BaseModel):
-    name: str
-    description: Optional[str] = None
-    address: str
-    commissioning_year: str
+class BuildingRequestDTO(BaseModel):
+	name: str
+	description: Optional[str] = None
+	commissioning_year: str
 
 
-class AreaBuildingResponseDTO(AreaBuildingRequestDTO):
-    id: UUID
-    land_area_id: UUID
+class BuildingResponseDTO(BuildingRequestDTO):
+	id: UUID
+	land_area_id: UUID
 
 
-class CadastralLandAreaRequestDTO(BaseModel):
-    cadastral_number: str
-    area_category: str
-    area_square: float
-    search_channel: str
+class LandAreaRequestDTO(BaseModel):
+	name: str
+	cadastral_number: str
+	area_category: str
+	area_square: float
+	address: Optional[str]
+	search_channel: str
+
+	@field_validator('cadastral_number')
+	@classmethod
+	def cadastral_number_validator(cls, field: str) -> str:
+		if re.match("[0-9]{2}:[0-9]{2}:[0-9]{6,7}:[0-9]{1,6}", field):
+			return field
+		return field
+
+	@field_validator('area_square')
+	@classmethod
+	def positive_number_validator(cls, field: float) -> float:
+		if field <= 0:
+			raise ValueError(
+				'"area_square" can\'t be less than 0')
+		return field
 
 
-class CadastralLandAreaRelatedResponseDTO(CadastralLandAreaRequestDTO):
-    id: UUID
-    entered_at_base: datetime
-    working_status_id: UUID
-    stage_id: UUID
+class LandAreaRelatedResponseDTO(LandAreaRequestDTO):
+	id: UUID
+	entered_at_base: datetime
+	working_status_id: UUID
+	stage_id: UUID
 
-    stage: 'StageResponseDTO'
-    status: 'StatusResponseDTO'
-    area_buildings: Optional[List['AreaBuildingResponseDTO']] = None
-    owners: Optional[List['ObjectOwnerResponseDTO']] = None
+	stage: 'StageResponseDTO'
+	status: 'StatusResponseDTO'
+	area_buildings: Optional[List['BuildingResponseDTO']] = None
+	owners: Optional[List['OwnerResponseDTO']] = None
+
+
+class LandAreaListResponseDTO(BaseModel):
+	id: UUID
+	cadastral_number: str
+	area_category: str
+	area_square: float
+	area_cost: Optional[float] = None
+	entered_at_base: datetime
+	status: 'StatusResponseDTO'
+	stage: 'StageResponseDTO'

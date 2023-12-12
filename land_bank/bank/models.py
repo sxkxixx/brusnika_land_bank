@@ -54,14 +54,20 @@ class LandArea(Base):
         primary_key=True,
         default=uuid.uuid4
     )
+    name: Mapped[str] = mapped_column(
+        sqlalchemy.String(length=64), nullable=False
+    )
     cadastral_number: Mapped[str] = mapped_column(
         sqlalchemy.String(length=32), nullable=False,
     )
     area_category: Mapped[str] = mapped_column(
         sqlalchemy.String(length=64), nullable=False,
     )
-    area_square: Mapped[int] = mapped_column(
-        sqlalchemy.Integer, nullable=False,
+    area_square: Mapped[float] = mapped_column(
+        sqlalchemy.Double, nullable=False,
+    )
+    address: Mapped[str] = mapped_column(
+        sqlalchemy.String(length=64), nullable=False
     )
     search_channel: Mapped[str] = mapped_column(
         sqlalchemy.String(length=32), nullable=False
@@ -116,9 +122,6 @@ class Building(Base):
     description: Mapped[Optional[str]] = mapped_column(
         sqlalchemy.String(length=128), nullable=True
     )
-    address: Mapped[str] = mapped_column(
-        sqlalchemy.String(length=128), nullable=False,
-    )
     commissioning_year: Mapped[str] = mapped_column(
         sqlalchemy.String(length=4), nullable=False
     )
@@ -139,11 +142,8 @@ class LandOwner(Base):
         sqlalchemy.UUID(as_uuid=True), primary_key=True,
         default=uuid.uuid4
     )
-    owner_name: Mapped[str] = mapped_column(
+    name: Mapped[str] = mapped_column(
         sqlalchemy.String(length=64), nullable=False,
-    )
-    contact_name: Mapped[str] = mapped_column(
-        sqlalchemy.String(length=64), nullable=True,
     )
     email: Mapped[str] = mapped_column(
         sqlalchemy.String(length=64), nullable=True,
@@ -153,9 +153,6 @@ class LandOwner(Base):
     )
     location: Mapped[str] = mapped_column(
         sqlalchemy.String(length=128), nullable=True,
-    )
-    person_type: Mapped[str] = mapped_column(
-        sqlalchemy.String(length=32), nullable=False
     )
     land_area_id: Mapped[uuid.UUID] = mapped_column(
         sqlalchemy.ForeignKey('cadastral_land_area.id', ondelete='CASCADE'),
