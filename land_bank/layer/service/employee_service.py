@@ -4,11 +4,11 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from layers.repositories import EmployeeRepository
+from layer.repository import EmployeeRepository
 from core.rpc_exceptions import UniqueEmailError, LoginError
-from auth.models import Employee, Position, PermissionPosition
+from auth.model import Employee, Position, PermissionPosition
 
-from utils import Hasher
+from util import Hasher
 
 
 class EmployeeService:

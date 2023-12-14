@@ -5,8 +5,8 @@ import fastapi_jsonrpc as jsonrpc
 from fastapi import Depends
 
 from auth import AuthenticationDependency, AuthorizationDependency
-from bank.models import Stage, Status
-from bank.schemas import (
+from bank.model import Stage, Status
+from bank.schema import (
 	LandAreaListResponseDTO,
 	SortParams,
 	LimitOffset,
@@ -18,7 +18,7 @@ from bank.schemas import (
 	StatusResponseDTO
 )
 from core import rpc_exceptions
-from layers import land_area_service, LandAreaService
+from layer import land_area_service, LandAreaService
 
 areas_endpoint = jsonrpc.Entrypoint(path='/api/v1/areas', tags=['AREAS'])
 

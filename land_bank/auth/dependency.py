@@ -2,9 +2,9 @@ from typing import Annotated, Optional
 from fastapi import Header, Depends
 
 from .token_service import TokenService
-from .models import Employee
+from .model import Employee
 from core.rpc_exceptions import AuthenticationError, AuthorizationError
-from layers import EmployeeService, employee_service
+from layer import EmployeeService, employee_service
 from jose import JWTError
 
 

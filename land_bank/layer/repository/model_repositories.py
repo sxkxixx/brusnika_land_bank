@@ -1,6 +1,6 @@
-from auth.models import Employee
+from auth.model import Employee
 from .sqlalchemy_repository import SQLAlchemyRepositoryV1
-from bank.models import (
+from bank.model import (
 	LandArea,
 	Building,
 	LandOwner,

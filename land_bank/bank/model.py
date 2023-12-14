@@ -4,7 +4,7 @@ from typing import List, Optional
 import sqlalchemy
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from auth.models import Employee
+from auth.model import Employee
 from core import Base
 
 __all__ = [

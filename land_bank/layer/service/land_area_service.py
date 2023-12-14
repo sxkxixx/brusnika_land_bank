@@ -8,8 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy import desc, asc
 from core import rpc_exceptions
-from bank.models import LandArea, Stage, Status
-from layers.repositories import (
+from bank.model import LandArea, Stage, Status
+from layer.repository import (
 	SQLAlchemyRepositoryV1,
 	LandAreaRepository,
 	BuildingRepository,

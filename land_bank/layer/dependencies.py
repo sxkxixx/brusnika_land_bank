@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core import get_async_session
-from .services import *
+from .service import *
 from fastapi import Depends
 
 __all__ = [

@@ -6,18 +6,18 @@ from fastapi import Depends, Header, Cookie, Response, File, UploadFile
 
 from core import Config
 from core import rpc_exceptions
-from utils import FileValidator
-from .schemas import (
+from util import FileValidator
+from .schema import (
 	EmployeeCreateSchema,
 	EmployeeReadSchema,
 	EmployeeLoginSchema,
 	TokenResponseSchema,
 	EmployeeRelationsResponse
 )
-from .dependencies import AuthenticationDependency, AuthorizationDependency
-from .models import Employee
+from .dependency import AuthenticationDependency, AuthorizationDependency
+from .model import Employee
 from .refresh_session import RefreshSession
-from layers import EmployeeService, employee_service, S3Service
+from layer import EmployeeService, employee_service, S3Service
 from .token_service import TokenService
 
 auth_application = jsonrpc.Entrypoint(path='/api/v1/auth')

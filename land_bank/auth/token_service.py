@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Dict
 
-from .models import Employee
+from .model import Employee
 from core import Config
 from jose import jwt
 

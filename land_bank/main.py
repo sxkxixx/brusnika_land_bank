@@ -2,7 +2,7 @@ from fastapi_jsonrpc import API
 from auth import auth_application
 from fastapi.middleware.cors import CORSMiddleware
 from core import Config
-from bank.endpoints import areas_endpoint
+from bank.endpoint import areas_endpoint
 
 app = API()
 

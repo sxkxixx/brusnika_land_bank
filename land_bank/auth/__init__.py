@@ -1,2 +1,2 @@
 from .api import auth_application
-from .dependencies import AuthenticationDependency, AuthorizationDependency
+from .dependency import AuthenticationDependency, AuthorizationDependency
