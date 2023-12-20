@@ -1,18 +1,25 @@
-from fastapi_jsonrpc import API
-from auth import auth_application
 from fastapi.middleware.cors import CORSMiddleware
-from core import Config
-from bank.endpoint import areas_endpoint
+from fastapi_jsonrpc import API
 
-app = API()
+from infrastructure.settings import AppSettings
+from infrastructure import application
+from endpoint.rpc import *
 
-app.bind_entrypoint(auth_application)
-app.bind_entrypoint(areas_endpoint)
+ENTRYPOINTS = (
+	employee.router,
+	area_comment.router,
+	land_area.router,
+	scheduler.router,
+)
+
+app: API = application.create_app(
+	entrypoints=ENTRYPOINTS,
+)
 
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[Config.FRONTEND_HOST],
-    allow_credentials=True,
-    allow_methods=['POST'],
-    allow_headers=['*']
+	CORSMiddleware,
+	allow_origins=[AppSettings.FRONTEND_HOST],
+	allow_credentials=True,
+	allow_methods=['POST'],
+	allow_headers=['*']
 )

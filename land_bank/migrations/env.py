@@ -4,9 +4,8 @@ from logging.config import fileConfig
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
-from core import Config
-from auth.model import *
-from bank.model import *
+from infrastructure.settings import DatabaseSettings
+from infrastructure.database.model import *
 from alembic import context
 
 # this is the Alembic Config object, which provides
@@ -17,27 +16,27 @@ section = config.config_ini_section
 config.set_section_option(
     section,
     'POSTGRES_DB',
-    Config.POSTGRES_DB
+    DatabaseSettings.POSTGRES_DB
 )
 config.set_section_option(
     section,
     'POSTGRES_HOST',
-    Config.POSTGRES_HOST
+    DatabaseSettings.POSTGRES_HOST
 )
 config.set_section_option(
     section,
     'POSTGRES_PORT',
-    str(Config.POSTGRES_PORT)
+    str(DatabaseSettings.POSTGRES_PORT)
 )
 config.set_section_option(
     section,
     'POSTGRES_USER',
-    Config.POSTGRES_USER
+    DatabaseSettings.POSTGRES_USER
 )
 config.set_section_option(
     section,
-    'POSTGRES_PASSWORD'
-    , Config.POSTGRES_PASSWORD
+    'POSTGRES_PASSWORD',
+    DatabaseSettings.POSTGRES_PASSWORD
 )
 
 # Interpret the config file for Python logging.
@@ -48,9 +47,8 @@ if config.config_file_name is not None:
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
-# target_metadata = mymodel.BaseRepository.metadata
-target_metadata = Employee.metadata
-
+# target_metadata = mymodel.BaseRepository.meta
+target_metadata = Base.metadata
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
