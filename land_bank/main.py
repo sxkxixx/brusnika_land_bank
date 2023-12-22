@@ -18,7 +18,7 @@ app: API = application.create_app(
 
 app.add_middleware(
 	CORSMiddleware,
-	allow_origins=[AppSettings.FRONTEND_HOST],
+	allow_origins=['http://localhost:5173'],
 	allow_credentials=True,
 	allow_methods=['POST'],
 	allow_headers=['*']

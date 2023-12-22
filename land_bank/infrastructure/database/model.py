@@ -48,7 +48,7 @@ class Employee(Base):
 	s3_avatar_file: Mapped[str] = mapped_column(
 		sqlalchemy.String(64), nullable=True
 	)
-	position_id: Mapped[int] = mapped_column(
+	position_id: Mapped[UUID] = mapped_column(
 		sqlalchemy.ForeignKey(
 			'land_bank_position.id', ondelete='RESTRICT'
 		), nullable=True

@@ -50,7 +50,8 @@ async def login_user(
 		refresh_token,
 		expires=ttl,
 		max_age=ttl,
-		httponly=True
+		httponly=True,
+		path='/api/v1/auth'
 	)
 	return TokenResponseSchema(access_token=access_token)
 
@@ -59,7 +60,7 @@ async def login_user(
 async def refresh_session(
 		response: Response,
 		user_agent: Annotated[str, Header()],
-		refresh_token: Annotated[str, Cookie()] = None,
+		refresh_token: Annotated[str, Cookie()],
 		database_session: AsyncSession = Depends(async_session_generator),
 ) -> TokenResponseSchema:
 	employee_service: EmployeeService = EmployeeService(database_session)
@@ -81,7 +82,8 @@ async def refresh_session(
 		refresh_token,
 		expires=ttl,
 		max_age=ttl,
-		httponly=True
+		httponly=True,
+		path='/api/v1/auth'
 	)
 	return TokenResponseSchema(access_token=access_token)
 
@@ -115,4 +117,4 @@ async def get_employee_profile_info(
 ) -> EmployeeRelationsResponse:
 	employee_service: EmployeeService = EmployeeService(session)
 	employee: Employee = await employee_service.get_full_profile(employee)
-	return EmployeeRelationsResponse.from_model(employee)
+	return EmployeeRelationsResponse.model_validate(employee, from_attributes=True)

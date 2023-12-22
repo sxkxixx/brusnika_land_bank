@@ -82,12 +82,12 @@ class EmployeeReadSchema(BaseModel):
 	patronymic: Optional[str] = None
 	phone_number: Optional[str] = None
 	s3_avatar_file: Optional[str] = None
-	position_id: Optional[int] = None
+	position_id: Optional[UUID] = None
 	department_id: Optional[UUID] = None
 
 
 class PositionReadSchema(BaseModel):
-	id: int
+	id: UUID
 	position_name: str
 	is_director_position: bool
 
