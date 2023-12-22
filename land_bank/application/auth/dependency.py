@@ -26,7 +26,8 @@ def _get_token_payload(access_token: str) -> dict:
 class AuthenticationDependency:
 	def __init__(self, is_strict: bool = True):
 		self.__is_strict: bool = is_strict
-		self.__employee_service: EmployeeService = EmployeeService(async_session())
+		self.__employee_service: EmployeeService = EmployeeService()
+		self.__employee_service.set_async_session(async_session())
 
 	async def __call__(
 			self,
@@ -64,7 +65,8 @@ class AuthenticationDependency:
 class AuthorizationDependency:
 	def __init__(self, permission_name: str):
 		self.__permission_name = permission_name
-		self.__service: EmployeeService = EmployeeService(async_session())
+		self.__service: EmployeeService = EmployeeService()
+		self.__service.set_async_session(async_session())
 
 	async def __call__(
 			self,

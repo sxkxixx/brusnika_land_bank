@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 from typing import Optional, Union
 from uuid import UUID
 
@@ -13,11 +14,21 @@ __all__ = [
 	'EmployeeLoginSchema',
 	'EmployeeCreateSchema',
 	'EmployeeReadSchema',
-	'EmployeeRelationsResponse',
+	'EmployeeRelatedResponse',
 	'DepartmentReadSchema',
 	'PositionReadSchema',
-	'ShortEmployeeResponseDTO'
+	'ShortEmployeeResponseDTO',
+	'ProfilePhotoResponseDTO',
+	'EditProfileDTO'
 ]
+
+
+def _phone_number_validator(field: Union[str, None]) -> Union[str, None]:
+	if field is None:
+		return field
+	if re.match('^\\+?[1-9][0-9]{7,14}$', field) is None:
+		raise ValueError('Incorrect Phone Number')
+	return field
 
 
 class EmployeeLoginSchema(BaseModel):
@@ -41,20 +52,16 @@ class EmployeeCreateSchema(EmployeeLoginSchema):
 	@field_validator('password', 'password_repeat', mode='after')
 	@classmethod
 	def validate_password_length(cls, field: str) -> str:
-		if len(field) < 12:
+		if len(field) < 8:
 			raise ValueError(
-				f'Password must be at least 12 symbols'
+				f'Password must be at least 8 symbols'
 			)
 		return field
 
 	@field_validator('phone_number', mode='after')
 	@classmethod
-	def validate_phone_number(cls, field: Union[str | None]):
-		if field is None:
-			return field
-		if re.match('^\\+?[1-9][0-9]{7,14}$', field) is None:
-			raise ValueError('Incorrect Phone Number')
-		return field
+	def validate_phone_number(cls, field: Union[str, None]) -> str | None:
+		return _phone_number_validator(field)
 
 	@field_validator('email', mode='after')
 	@classmethod
@@ -68,7 +75,7 @@ class EmployeeCreateSchema(EmployeeLoginSchema):
 		mode='after'
 	)
 	@classmethod
-	def capitalize(cls, field: Union[str | None]):
+	def capitalize(cls, field: Union[str, None]):
 		if field is None:
 			return field
 		return field.capitalize()
@@ -97,7 +104,7 @@ class DepartmentReadSchema(BaseModel):
 	department_name: str
 
 
-class EmployeeRelationsResponse(EmployeeReadSchema):
+class EmployeeRelatedResponse(EmployeeReadSchema):
 	employee_head: Optional[EmployeeReadSchema] = None
 	position: Optional['PositionReadSchema'] = None
 	department: Optional['DepartmentReadSchema'] = None
@@ -112,3 +119,20 @@ class ShortEmployeeResponseDTO(BaseModel):
 	email: EmailStr
 	last_name: str
 	first_name: str
+
+
+class ProfilePhotoResponseDTO(BaseModel):
+	profile_photo_link: Optional[str] = None
+	expires_in: Optional[datetime] = None
+
+
+class EditProfileDTO(BaseModel):
+	last_name: str
+	first_name: str
+	patronymic: Optional['str'] = None
+	phone_number: Optional['str'] = None
+
+	@field_validator('phone_number', mode='after')
+	@classmethod
+	def validate_phone_number(cls, field: Union[str, None]) -> str | None:
+		return _phone_number_validator(field)

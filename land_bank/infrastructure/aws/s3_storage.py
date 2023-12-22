@@ -45,7 +45,7 @@ class S3Storage:
             url = await client.generate_presigned_url(
                 'get_object',
                 Params={"Bucket": S3Settings.BUCKET_NAME, "Key": file_name},
-                ExpiresIn=300
+                ExpiresIn=3600
             )
         return url
 
