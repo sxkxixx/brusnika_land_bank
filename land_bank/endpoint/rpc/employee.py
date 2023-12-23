@@ -1,13 +1,14 @@
 from datetime import datetime, timedelta
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends
+from fastapi import Depends, Header
 from fastapi_jsonrpc import Entrypoint
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.auth.dependency import AuthenticationDependency
 from domain.employee import (
-	EmployeeRelatedResponse,
+	EmployeeReadSchema, EmployeeRelatedResponse,
 	ProfilePhotoResponseDTO,
 	EditProfileDTO
 )
@@ -20,6 +21,20 @@ from infrastructure.aws.s3_storage import S3Storage
 router = Entrypoint(path='/api/v1/usr', tags=['USER RPC'])
 s3 = S3Storage()
 employee_service: EmployeeService = EmployeeService()
+
+
+@router.method(
+	errors=[rpc_exceptions.AuthenticationError],
+)
+async def get_profile(
+		employee: Employee = Depends(AuthenticationDependency()),
+		session: AsyncSession = Depends(async_session_generator)
+) -> EmployeeRelatedResponse:
+	"""Профиль текущего пользователя"""
+	employee_service.set_async_session(session)
+	employee: Employee = await employee_service.get_full_profile(employee.id)
+	return EmployeeRelatedResponse.model_validate(
+		employee, from_attributes=True)
 
 
 @router.method(
@@ -74,8 +89,8 @@ async def update_profile_info(
 		edited_info: EditProfileDTO,
 		employee: Employee = Depends(AuthenticationDependency()),
 		session: AsyncSession = Depends(async_session_generator)
-):
+) -> EmployeeReadSchema:
 	employee_service.set_async_session(session)
 	employee: Employee = await employee_service.update_profile_info(
 		employee.id, **edited_info.model_dump())
-	return employee
+	return EmployeeReadSchema.model_validate(employee, from_attributes=True)

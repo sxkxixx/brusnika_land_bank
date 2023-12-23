@@ -109,10 +109,6 @@ class EmployeeRelatedResponse(EmployeeReadSchema):
 	position: Optional['PositionReadSchema'] = None
 	department: Optional['DepartmentReadSchema'] = None
 
-	@classmethod
-	def from_model(cls, model):
-		return cls.model_validate(model, from_attributes=True)
-
 
 class ShortEmployeeResponseDTO(BaseModel):
 	id: UUID

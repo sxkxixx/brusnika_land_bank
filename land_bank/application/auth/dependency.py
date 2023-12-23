@@ -41,10 +41,13 @@ class AuthenticationDependency:
 			self,
 			access_token: str,
 	) -> Employee:
+		if not access_token:
+			raise rpc_exceptions.AuthenticationError(
+				data='No access token there')
 		payload = _get_token_payload(access_token)
-		employee: Optional[
-			Employee] = await self.__employee_service.get_employee(
-			Employee.email == payload.get('email'))
+		employee: Optional[Employee] = await self.__employee_service.get_employee(
+			Employee.email == payload.get('email')
+		)
 		if employee is None:
 			raise rpc_exceptions.AuthenticationError(
 				data='Access Token is invalid')
