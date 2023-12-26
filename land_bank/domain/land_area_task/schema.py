@@ -8,12 +8,17 @@ from datetime import datetime
 __all__ = [
 	'TaskRequestDTO',
 	'TaskRelatedResponseDTO',
-	'ListTaskResponseDTO',
-	'EditTaskRequestDTO'
+	'EditTaskRequestDTO',
+	'TaskListResponseDTO',
+	'SchedulerTaskResponseDTO',
+	'TaskResponseDTO'
 ]
 
 
 class TaskRequestDTO(BaseModel):
+	"""
+	Схема для создания задачи для земельного участка
+	"""
 	name: str = Field(
 		..., description='Not nullable', max_length=64)
 	description: Optional[str] = Field(
@@ -34,21 +39,36 @@ class TaskRequestDTO(BaseModel):
 
 
 class EditTaskRequestDTO(TaskRequestDTO):
+	"""
+	Схема для обновление полей задачи
+	"""
 	status: str
 
 
-class TaskRelatedResponseDTO(TaskRequestDTO):
-	status: str
-	executor: 'ShortEmployeeResponseDTO'
+class TaskResponseDTO(TaskRequestDTO):
+	id: UUID
 	author_id: UUID
+	status: str
+
+
+class TaskRelatedResponseDTO(TaskResponseDTO):
+	"""
+	Схема для вывода полной информации по задаче с отношениями
+	"""
+	executor: 'ShortEmployeeResponseDTO'
 	author: 'ShortEmployeeResponseDTO'
 	land_area: 'ShortLandAreaResponseDTO'
 
 
-class ListTaskResponseDTO(BaseModel):
-	id: UUID
-	name: str
-	status: str
-	land_area_id: UUID
+class SchedulerTaskResponseDTO(TaskResponseDTO):
+	"""
+	Схема для вывода информации по задаче в планировщике задач
+	"""
 	land_area: 'ShortLandAreaResponseDTO'
-	deadline: datetime
+
+
+class TaskListResponseDTO(TaskResponseDTO):
+	"""
+	Схема для вывода информации по задаче в списке задач земельного участка
+	"""
+	executor: 'ShortEmployeeResponseDTO'

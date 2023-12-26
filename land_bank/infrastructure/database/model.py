@@ -296,7 +296,7 @@ class ArchiveInfo(Base):
 class Stage(Base):
 	__tablename__ = 'area_stages'
 
-	stage_name: Mapped[str] = mapped_column(
+	name: Mapped[str] = mapped_column(
 		sqlalchemy.String(length=32), nullable=False, unique=True
 	)
 
@@ -308,7 +308,7 @@ class Stage(Base):
 class Status(Base):
 	__tablename__ = 'area_working_statuses'
 
-	status_name: Mapped[str] = mapped_column(
+	name: Mapped[str] = mapped_column(
 		sqlalchemy.String(length=32), nullable=False, unique=True
 	)
 
@@ -361,4 +361,119 @@ class LandAreaTask(Base):
 	)
 	land_area: Mapped[LandArea] = relationship(
 		'LandArea', back_populates='tasks'
+	)
+
+
+# Дополнительная информация и юридические сведения по Земельным участкам
+# Связь m2m
+
+class Limit(Base):
+	"""Ограничения и обременения"""
+
+	__tablename__ = 'area_limits'
+
+	name: Mapped[str] = mapped_column(
+		sqlalchemy.String(length=64), nullable=False, unique=True
+	)
+
+	juristic_data_list: Mapped[List['JuristicData']] = relationship(
+		secondary='limit__juristic_data', back_populates='limits'
+	)
+
+
+class JuristicDataLimit(Base):
+	"""Ассоциативная таблица для таблиц juristic_data и area_limits"""
+
+	__tablename__ = 'limit__juristic_data'
+
+	limit_id: Mapped[UUID] = mapped_column(
+		sqlalchemy.ForeignKey('area_limits.id', ondelete='CASCADE'),
+		primary_key=True
+	)
+	juristic_data_id: Mapped[UUID] = mapped_column(
+		sqlalchemy.ForeignKey('juristic_data.id', ondelete='CASCADE'),
+		primary_key=True
+	)
+
+
+class JuristicData(Base):
+	"""Юридические сведения"""
+
+	__tablename__ = 'juristic_data'
+
+	land_area_id: Mapped[UUID] = mapped_column(
+		sqlalchemy.ForeignKey('cadastral_land_area.id', ondelete='CASCADE'),
+		nullable=False, unique=True
+	)
+	buildings_count: Mapped[int] = mapped_column(
+		sqlalchemy.Integer, nullable=False, default=1
+	)
+	owners_count: Mapped[int] = mapped_column(
+		sqlalchemy.Integer
+	)
+	cadastral_cost: Mapped[float] = mapped_column(
+		sqlalchemy.Numeric(), nullable=False
+	)
+
+	limits: Mapped[List['Limit']] = relationship(
+		secondary='limit__juristic_data', back_populates='juristic_data_list'
+	)
+
+	permitted_use_list: Mapped[List['PermittedUse']] = relationship(
+		secondary='juristic_data__permitted_uses',
+		back_populates='juristic_data_pu_list'
+	)
+
+	land_area: Mapped['LandArea'] = relationship(
+		'LandArea', backref='juristic_data'
+	)
+
+
+class JuristicDataPermittedUse(Base):
+	"""Ассоциативная таблица для таблиц permitted_uses и juristic_data"""
+
+	__tablename__ = 'juristic_data__permitted_uses'
+
+	permitted_use_id: Mapped[UUID] = mapped_column(
+		sqlalchemy.ForeignKey('permitted_uses.id', ondelete='CASCADE'),
+		primary_key=True
+	)
+	juristic_data_id: Mapped[UUID] = mapped_column(
+		sqlalchemy.ForeignKey('juristic_data.id', ondelete='CASCADE'),
+		primary_key=True
+	)
+
+
+class PermittedUse(Base):
+	"""Виды разрешенного пользования"""
+	__tablename__ = 'permitted_uses'
+
+	name: Mapped[str] = mapped_column(
+		sqlalchemy.String(length=64), nullable=False,
+		unique=True
+	)
+
+	juristic_data_pu_list: Mapped[List['JuristicData']] = relationship(
+		secondary='juristic_data__permitted_uses',
+		back_populates='permitted_use_list'
+	)
+
+
+# Дополнительная информация Земельного банка
+
+class ExtraAreaData(Base):
+	__tablename__ = 'extra_land_area_data'
+
+	land_area_id: Mapped[UUID] = mapped_column(
+		sqlalchemy.ForeignKey('cadastral_land_area.id', ondelete='CASCADE'),
+		nullable=False
+	)
+	engineering_networks: Mapped[str] = mapped_column(
+		sqlalchemy.String(length=128), nullable=True
+	)
+	transport: Mapped[str] = mapped_column(
+		sqlalchemy.String(length=128), nullable=True
+	)
+	result: Mapped[str] = mapped_column(
+		sqlalchemy.String(length=256), nullable=True
 	)

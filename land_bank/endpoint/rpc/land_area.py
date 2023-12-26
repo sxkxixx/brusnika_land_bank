@@ -75,7 +75,10 @@ async def create_cadastral_land_area(
 
 
 @router.method(
-	errors=[rpc_exceptions.AuthenticationError],
+	errors=[
+		rpc_exceptions.AuthenticationError,
+		rpc_exceptions.TransactionError
+	],
 	dependencies=[Depends(AuthenticationDependency())]
 )
 async def update_cadastral_land_area(
@@ -88,3 +91,37 @@ async def update_cadastral_land_area(
 		id=id, **land_area.model_dump()
 	)
 	return LandAreaRequestDTO.model_validate(land_area, from_attributes=True)
+
+
+@router.method(
+	errors=[
+		rpc_exceptions.AuthenticationError,
+		rpc_exceptions.TransactionError
+	],
+	dependencies=[Depends(AuthenticationDependency())]
+)
+async def change_area_status(
+		land_area_id: UUID,
+		status_name: str,
+		session: AsyncSession = Depends(async_session_generator)
+) -> LandAreaResponseDTO:
+	land_area_service: LandAreaService = LandAreaService(session)
+	land_area = await land_area_service.update_status(land_area_id, status_name)
+	return LandAreaResponseDTO.model_validate(land_area, from_attributes=True)
+
+
+@router.method(
+	errors=[
+		rpc_exceptions.AuthenticationError,
+		rpc_exceptions.TransactionError
+	],
+	dependencies=[Depends(AuthenticationDependency())]
+)
+async def change_area_stage(
+		land_area_id: UUID,
+		stage_name: str,
+		session: AsyncSession = Depends(async_session_generator)
+) -> LandAreaResponseDTO:
+	land_area_service: LandAreaService = LandAreaService(session)
+	land_area = await land_area_service.update_stage(land_area_id, stage_name)
+	return LandAreaResponseDTO.model_validate(land_area, from_attributes=True)

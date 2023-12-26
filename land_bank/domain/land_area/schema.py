@@ -13,7 +13,8 @@ __all__ = [
 	'LandAreaListResponseDTO',
 	'StageResponseDTO',
 	'StatusResponseDTO',
-	'ShortLandAreaResponseDTO'
+	'ShortLandAreaResponseDTO',
+	'LandAreaResponseDTO'
 ]
 
 
@@ -60,6 +61,7 @@ class BuildingResponseDTO(BuildingRequestDTO):
 class ShortLandAreaResponseDTO(BaseModel):
 	id: UUID
 	name: str
+	cadastral_number: str
 
 
 class LandAreaRequestDTO(BaseModel):
@@ -86,12 +88,14 @@ class LandAreaRequestDTO(BaseModel):
 		return field
 
 
-class LandAreaRelatedResponseDTO(LandAreaRequestDTO):
+class LandAreaResponseDTO(LandAreaRequestDTO):
 	id: UUID
 	entered_at_base: datetime
 	working_status_id: UUID
 	stage_id: UUID
 
+
+class LandAreaRelatedResponseDTO(LandAreaResponseDTO):
 	stage: 'StageResponseDTO'
 	status: 'StatusResponseDTO'
 	area_buildings: Optional[List['BuildingResponseDTO']] = None
@@ -101,10 +105,11 @@ class LandAreaRelatedResponseDTO(LandAreaRequestDTO):
 
 class LandAreaListResponseDTO(BaseModel):
 	id: UUID
+	name: str
 	cadastral_number: str
 	area_category: str
 	area_square: float
-	area_cost: Optional[float] = None
 	entered_at_base: datetime
 	status: 'StatusResponseDTO'
 	stage: 'StageResponseDTO'
+	owners: List['OwnerResponseDTO']

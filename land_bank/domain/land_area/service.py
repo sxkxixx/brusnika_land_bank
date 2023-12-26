@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy import desc, asc
 from infrastructure.exception import rpc_exceptions
 from infrastructure.database.model import (
@@ -37,7 +37,11 @@ class LandAreaService:
 			limit_offset,
 			sort_params,
 	) -> Iterable['LandArea']:
-		options = [selectinload(LandArea.status), selectinload(LandArea.stage)]
+		options = [
+			selectinload(LandArea.status),
+			selectinload(LandArea.stage),
+			selectinload(LandArea.owners)
+		]
 		sorting_function: Callable = desc if sort_params.order == 'desc' else \
 			asc
 		orders = [
@@ -169,3 +173,45 @@ class LandAreaService:
 			raise rpc_exceptions.TransactionError(data=str(e))
 		finally:
 			await self.session.close()
+
+	async def update_status(self, land_area_id: UUID, status_name: str) -> LandArea:
+		status: Status = await self._status_repo.get_record(
+			Status.name == status_name
+		)
+		if not status:
+			raise rpc_exceptions.ObjectDoesNotExistsError(
+				data="No status by this 'status_name'"
+			)
+		try:
+			land_area: LandArea = await self.__land_area_repository.update_record(
+				LandArea.id == land_area_id,
+				working_status_id=status.id
+			)
+			await self.session.commit()
+			return land_area
+		except Exception as e:
+			await self.session.rollback()
+			raise rpc_exceptions.TransactionError(data=str(e))
+		finally:
+			await self.session.rollback()
+
+	async def update_stage(self, land_area_id: UUID, stage_name: str) -> LandArea:
+		stage: Stage = await self._status_repo.get_record(
+			Stage.name == stage_name
+		)
+		if not stage:
+			raise rpc_exceptions.ObjectDoesNotExistsError(
+				data="No stage by this 'stage_name'"
+			)
+		try:
+			land_area: LandArea = await self.__land_area_repository.update_record(
+				LandArea.id == land_area_id,
+				stage_id=stage
+			)
+			await self.session.commit()
+			return land_area
+		except Exception as e:
+			await self.session.rollback()
+			raise rpc_exceptions.TransactionError(data=str(e))
+		finally:
+			await self.session.rollback()

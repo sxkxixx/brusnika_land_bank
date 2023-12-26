@@ -37,3 +37,16 @@ class S3Settings:
 	REGION_NAME: str = os.getenv('REGION_NAME')
 	BUCKET_NAME: str = os.getenv('BUCKET_NAME')
 	S3_ENDPOINT_URL: str = os.getenv('S3_ENDPOINT_URL')
+
+
+class SMTPSettings:
+	# SMTP Protocol settings
+	EMAIL: str = os.getenv('SMTP_EMAIL')
+	PASSWORD: str = os.getenv('SMTP_PASSWORD')
+	HOST: str = os.getenv('SMTP_SERVER')
+	PORT: int = int(os.getenv('SMTP_PORT'))
+
+
+class AMQPSettings:
+	AMQP_HOST: str = os.getenv('AMQP_HOST')
+	AMQP_PORT: str = os.getenv('AMQP_PORT')

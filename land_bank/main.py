@@ -11,6 +11,8 @@ RPC_ENTRYPOINTS = (
 	rpc.area_comment.router,
 	rpc.land_area.router,
 	rpc.scheduler.router,
+	rpc.juristic_data.router,
+	rpc.extra_data.router
 )
 
 REST_ENTRYPOINT = (

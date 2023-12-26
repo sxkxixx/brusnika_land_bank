@@ -3,5 +3,7 @@ from endpoint.rpc import (
 	land_area,
 	scheduler,
 	auth,
-	employee
+	employee,
+	juristic_data,
+	extra_data
 )

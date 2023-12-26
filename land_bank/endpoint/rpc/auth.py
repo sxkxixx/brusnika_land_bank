@@ -7,13 +7,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from application.auth.dependency import AuthenticationDependency
 from application.auth.refresh import RefreshSession
 from application.auth.token import TokenService
+from application.message import PasswordResetMessage
 from domain.employee import *
 from domain.employee.service import EmployeeService
+from domain.email_message.schemas import *
 from domain.token import *
 from infrastructure.database.model import Employee
 from infrastructure.database.session import async_session_generator
 from infrastructure.exception import rpc_exceptions
 from infrastructure.settings import AppSettings
+from infrastructure.celery import send_message
 
 router = jsonrpc.Entrypoint(path='/api/v1/auth', tags=['AUTH'])
 employee_service: EmployeeService = EmployeeService()
@@ -106,3 +109,22 @@ async def logout(
 	await employee_session.delete(refresh_token)
 	response.delete_cookie(refresh_token, httponly=True)
 	return TokenResponseSchema(access_token=None)
+
+
+@router.method(errors=[rpc_exceptions.AuthenticationError])
+async def get_password_reset_email_message(
+		data: PasswordResetRequestDTO,
+		session: AsyncSession = Depends(async_session_generator)
+) -> PasswordResetResponseDTO:
+	employee_service.set_async_session(session)
+	employee: Employee = await employee_service.get_employee(
+		Employee.email == data.email
+	)
+	if not employee:
+		raise rpc_exceptions.ObjectDoesNotExistsError(
+			'No user by this email not exists'
+		)
+	message = PasswordResetMessage(
+		sender='', receiver=employee.email, user_email=employee.email)
+	send_message.delay(message)
+	return PasswordResetResponseDTO(email=employee.email)

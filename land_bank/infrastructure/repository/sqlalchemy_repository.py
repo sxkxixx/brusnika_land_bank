@@ -110,6 +110,11 @@ class SQLAlchemyRepository(Repository):
 			filters,
 			options
 	) -> DatabaseEntity:
+		"""
+		:param filters: Параметры фильтрации
+		:param options: Параметры подгрузки отношений
+		:return:
+		"""
 		statement = select(self.__model).where(*filters).options(*options)
 		return await self.__session.scalar(statement)
 
