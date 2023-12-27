@@ -8,25 +8,30 @@ from datetime import datetime
 __all__ = [
 	'TaskRequestDTO',
 	'TaskRelatedResponseDTO',
-	'EditTaskRequestDTO',
 	'TaskListResponseDTO',
 	'SchedulerTaskResponseDTO',
-	'TaskResponseDTO'
+	'TaskResponseDTO',
+	'TaskEditRequestDTO'
 ]
 
 
-class TaskRequestDTO(BaseModel):
-	"""
-	Схема для создания задачи для земельного участка
-	"""
+class TaskEditRequestDTO(BaseModel):
 	name: str = Field(
 		..., description='Not nullable', max_length=64)
 	description: Optional[str] = Field(
 		None, description='Nullable')
 	executor_id: UUID
-	land_area_id: UUID
-	started_at: Optional[datetime] = None
+	started_at: datetime
 	deadline: datetime
+	status: str = 'Создана'
+
+
+class TaskRequestDTO(TaskEditRequestDTO):
+	"""
+	Схема для создания задачи для земельного участка
+	"""
+	executor_id: UUID
+	land_area_id: UUID
 
 	@field_validator('description')
 	@classmethod
@@ -36,13 +41,6 @@ class TaskRequestDTO(BaseModel):
 		if len(field) > 128:
 			raise ValueError('Field "description" must be lte 128 symbols')
 		return field
-
-
-class EditTaskRequestDTO(TaskRequestDTO):
-	"""
-	Схема для обновление полей задачи
-	"""
-	status: str
 
 
 class TaskResponseDTO(TaskRequestDTO):

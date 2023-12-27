@@ -10,13 +10,13 @@ from domain.land_area_task.schema import (
 	TaskListResponseDTO,
 	TaskRequestDTO,
 	TaskRelatedResponseDTO,
-	EditTaskRequestDTO, TaskResponseDTO
+	TaskEditRequestDTO,
+	TaskResponseDTO
 )
 from domain.land_area_task.service import LandAreaTaskService
 from infrastructure.database.model import Employee, LandAreaTask
 from infrastructure.exception import rpc_exceptions
-from application.auth.dependency import AuthorizationDependency, \
-	AuthenticationDependency
+from application.auth.dependency import AuthenticationDependency
 from infrastructure.database.session import async_session_generator
 
 router = Entrypoint('/api/v1/scheduler', tags=['SCHEDULER'])
@@ -32,8 +32,7 @@ task_service: LandAreaTaskService = LandAreaTaskService()
 )
 async def create_land_area_task(
 		task: TaskRequestDTO,
-		employee: Employee = Depends(AuthorizationDependency(
-			permission_name='Can create land area task')),
+		employee: Employee = Depends(AuthenticationDependency()),
 		session: AsyncSession = Depends(async_session_generator)
 ) -> TaskRelatedResponseDTO:
 	task_service.set_async_session(session)
@@ -50,13 +49,12 @@ async def create_land_area_task(
 		rpc_exceptions.TransactionError
 	],
 	dependencies=[
-		Depends(AuthorizationDependency(
-			permission_name='Can edit land area task'))
+		Depends(AuthenticationDependency())
 	]
 )
 async def update_land_area_task(
 		task_id: UUID,
-		task: EditTaskRequestDTO,
+		task: TaskEditRequestDTO,
 		session: AsyncSession = Depends(async_session_generator)
 ) -> TaskResponseDTO:
 	task_service.set_async_session(session)

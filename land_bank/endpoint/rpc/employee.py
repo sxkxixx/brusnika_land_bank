@@ -1,8 +1,7 @@
 from datetime import datetime, timedelta
-from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends, Header
+from fastapi import Depends
 from fastapi_jsonrpc import Entrypoint
 from sqlalchemy.ext.asyncio import AsyncSession
 

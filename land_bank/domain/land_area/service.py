@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy.orm import selectinload
 from sqlalchemy import desc, asc
 from infrastructure.exception import rpc_exceptions
 from infrastructure.database.model import (
@@ -11,8 +11,6 @@ from infrastructure.database.model import (
 	LandArea,
 	Building,
 	LandOwner,
-	Stage,
-	Status
 )
 from infrastructure.repository.sqlalchemy_repository import SQLAlchemyRepository
 
@@ -29,25 +27,14 @@ class LandAreaService:
 			self.session, Building)
 		self.__area_owner_repository = SQLAlchemyRepository(
 			self.session, LandOwner)
-		self._status_repo = SQLAlchemyRepository(self.session, Status)
-		self._stage_repo = SQLAlchemyRepository(self.session, Stage)
 
 	async def get_ordered_lands(
 			self,
 			limit_offset,
 			sort_params,
 	) -> Iterable['LandArea']:
-		options = [
-			selectinload(LandArea.status),
-			selectinload(LandArea.stage),
-			selectinload(LandArea.owners)
-		]
-		sorting_function: Callable = desc if sort_params.order == 'desc' else \
-			asc
-		orders = [
-			sorting_function(getattr(LandArea, order_field)) for order_field in
-			sort_params.fields
-		]
+		options = [selectinload(LandArea.owners)]
+		orders = self.__get_orders(sort_params)
 		land_areas_list = await (
 			self.__land_area_repository.select_ordered_records(
 				offset=limit_offset.offset,
@@ -56,6 +43,16 @@ class LandAreaService:
 				orders=orders
 			))
 		return land_areas_list
+
+	def __get_orders(self, sort_params) -> List:
+		if not sort_params:
+			return []
+		sorting_function: Callable = desc if sort_params.order == 'desc' else \
+			asc
+		return [
+			sorting_function(getattr(LandArea, order_field))
+			for order_field in sort_params.fields
+		]
 
 	async def __create_land_area_related_objects(
 			self,
@@ -89,14 +86,8 @@ class LandAreaService:
 		:param schemas_buildings: Список схем обхектов
 		:return: Возвращает земельный участок с отношениями.
 		"""
-		status = await self._status_repo.get_or_create_record(
-			status_name='Новый')
-		stage = await self._stage_repo.get_or_create_record(
-			stage_name='Поиск')
-		print(stage, type(stage))
 		land_area: LandArea = await self.__land_area_repository.create_record(
-			**schema_land_area.model_dump(), working_status_id=status.id,
-			stage_id=stage.id)
+			**schema_land_area.model_dump())
 		await self.__create_land_area_related_objects(
 			land_area.id, self.__area_owner_repository, schemas_area_owners)
 		await self.__create_land_area_related_objects(
@@ -107,8 +98,6 @@ class LandAreaService:
 				filters=[LandArea.id == land_area.id],
 				options=[
 					selectinload(LandArea.area_buildings),
-					selectinload(LandArea.status),
-					selectinload(LandArea.stage),
 					selectinload(LandArea.owners),
 					selectinload(LandArea.comments)
 				])
@@ -135,11 +124,9 @@ class LandAreaService:
 			filters=[LandArea.id == id],
 			options=[
 				selectinload(LandArea.area_buildings),
-				selectinload(LandArea.status),
-				selectinload(LandArea.stage),
 				selectinload(LandArea.owners),
-				selectinload(LandArea.comments).selectinload(
-					AreaComment.employee)
+				selectinload(LandArea.comments).selectinload(AreaComment.employee),
+				selectinload(LandArea.extra_data)
 			]
 		)
 
@@ -150,17 +137,11 @@ class LandAreaService:
 		:param values_set: Значения для обновления
 		:return: Обновленный ЗУ
 		"""
-		land_area: LandArea = await (
-			self.__land_area_repository.get_record_with_relationships(
-				filters=[LandArea.id == id],
-				options=[selectinload(LandArea.status)]
-			))
+		land_area: LandArea = await self.__land_area_repository.get_record(
+			LandArea.id == id)
 		if not land_area:
 			raise rpc_exceptions.ObjectDoesNotExistsError(
 				data='No such land area by this id')
-		if land_area.status.status_name != 'Новый':
-			raise rpc_exceptions.TransactionForbiddenError(
-				data='Land area status has changed')
 		try:
 			land_area = await self.__land_area_repository.update_record(
 				LandArea.id == id,
@@ -173,45 +154,3 @@ class LandAreaService:
 			raise rpc_exceptions.TransactionError(data=str(e))
 		finally:
 			await self.session.close()
-
-	async def update_status(self, land_area_id: UUID, status_name: str) -> LandArea:
-		status: Status = await self._status_repo.get_record(
-			Status.name == status_name
-		)
-		if not status:
-			raise rpc_exceptions.ObjectDoesNotExistsError(
-				data="No status by this 'status_name'"
-			)
-		try:
-			land_area: LandArea = await self.__land_area_repository.update_record(
-				LandArea.id == land_area_id,
-				working_status_id=status.id
-			)
-			await self.session.commit()
-			return land_area
-		except Exception as e:
-			await self.session.rollback()
-			raise rpc_exceptions.TransactionError(data=str(e))
-		finally:
-			await self.session.rollback()
-
-	async def update_stage(self, land_area_id: UUID, stage_name: str) -> LandArea:
-		stage: Stage = await self._status_repo.get_record(
-			Stage.name == stage_name
-		)
-		if not stage:
-			raise rpc_exceptions.ObjectDoesNotExistsError(
-				data="No stage by this 'stage_name'"
-			)
-		try:
-			land_area: LandArea = await self.__land_area_repository.update_record(
-				LandArea.id == land_area_id,
-				stage_id=stage
-			)
-			await self.session.commit()
-			return land_area
-		except Exception as e:
-			await self.session.rollback()
-			raise rpc_exceptions.TransactionError(data=str(e))
-		finally:
-			await self.session.rollback()

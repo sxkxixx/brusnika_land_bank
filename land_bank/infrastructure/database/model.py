@@ -190,25 +190,15 @@ class LandArea(Base):
 	entered_at_base: Mapped[datetime] = mapped_column(
 		sqlalchemy.DateTime, default=datetime.now
 	)
-	working_status_id: Mapped[UUID] = mapped_column(
-		sqlalchemy.ForeignKey('area_working_statuses.id', ondelete='RESTRICT'),
-		nullable=False,
+	working_status: Mapped[str] = mapped_column(
+		sqlalchemy.String(length=32), nullable=False,
 	)
-	stage_id: Mapped[UUID] = mapped_column(
-		sqlalchemy.ForeignKey('area_stages.id', ondelete='RESTRICT'),
-		nullable=False
+	stage: Mapped[str] = mapped_column(
+		sqlalchemy.String(length=32), nullable=False
 	)
 
 	archive_info: Mapped[Optional['ArchiveInfo']] = relationship(
 		'ArchiveInfo', back_populates='land_area'
-	)
-
-	stage: Mapped['Stage'] = relationship(
-		'Stage', back_populates='land_areas'
-	)
-
-	status: Mapped['Status'] = relationship(
-		'Status', back_populates='land_areas'
 	)
 
 	area_buildings: Mapped[List['Building']] = relationship(
@@ -225,6 +215,10 @@ class LandArea(Base):
 
 	tasks: Mapped[List['LandAreaTask']] = relationship(
 		'LandAreaTask', back_populates='land_area'
+	)
+
+	extra_data: Mapped['ExtraAreaData'] = relationship(
+		'ExtraAreaData', back_populates='land_area'
 	)
 
 
@@ -290,30 +284,6 @@ class ArchiveInfo(Base):
 
 	land_area: Mapped['LandArea'] = relationship(
 		'LandArea', back_populates='archive_info'
-	)
-
-
-class Stage(Base):
-	__tablename__ = 'area_stages'
-
-	name: Mapped[str] = mapped_column(
-		sqlalchemy.String(length=32), nullable=False, unique=True
-	)
-
-	land_areas: Mapped[List['LandArea']] = relationship(
-		'LandArea', back_populates='stage'
-	)
-
-
-class Status(Base):
-	__tablename__ = 'area_working_statuses'
-
-	name: Mapped[str] = mapped_column(
-		sqlalchemy.String(length=32), nullable=False, unique=True
-	)
-
-	land_areas: Mapped[List['LandArea']] = relationship(
-		'LandArea', back_populates='status'
 	)
 
 
@@ -476,4 +446,8 @@ class ExtraAreaData(Base):
 	)
 	result: Mapped[str] = mapped_column(
 		sqlalchemy.String(length=256), nullable=True
+	)
+
+	land_area: Mapped['LandArea'] = relationship(
+		'LandArea', back_populates='extra_data'
 	)

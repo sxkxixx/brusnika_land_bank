@@ -12,22 +12,22 @@ class CommentService:
 		self.__repository = SQLAlchemyRepository(session, AreaComment)
 
 	async def create_comment(self, **kwargs) -> AreaComment:
-		comment: AreaComment = await self.__repository.create_record(
-			**kwargs
-		)
 		try:
+			comment: AreaComment = await self.__repository.create_record(**kwargs)
 			await self.__session.commit()
 			return comment
 		except Exception as e:
 			await self.__session.rollback()
 			raise rpc_exceptions.TransactionError(data=str(e))
+		finally:
+			await self.__session.close()
 
 	async def edit_comment(
 			self,
 			comment_id: UUID,
 			employee_id: UUID,
 			comment_text: str
-	):
+	) -> AreaComment:
 		try:
 			comment: AreaComment = await self.__repository.update_record(
 				AreaComment.id == comment_id,
@@ -35,6 +35,7 @@ class CommentService:
 				comment_text=comment_text
 			)
 			await self.__session.commit()
+			return comment
 		except Exception as e:
 			await self.__session.rollback()
 			raise rpc_exceptions.TransactionError(data=str(e))

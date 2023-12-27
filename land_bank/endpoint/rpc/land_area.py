@@ -4,14 +4,18 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.auth.dependency import AuthenticationDependency
-
+from domain.building.service import BuildingService
 from domain.land_area.service import LandAreaService
 from domain.land_area.schema import *
+from domain.owner.service import OwnerService
 from domain.request_params.schema import *
 from infrastructure.exception import rpc_exceptions
 from infrastructure.database.session import async_session_generator
+from infrastructure.repository.sqlalchemy_repository import SQLAlchemyRepository
 
 router = jsonrpc.Entrypoint(path='/api/v1/areas', tags=['AREAS'])
+owner_service = OwnerService()
+building_service = BuildingService()
 
 
 @router.method(
@@ -82,46 +86,49 @@ async def create_cadastral_land_area(
 	dependencies=[Depends(AuthenticationDependency())]
 )
 async def update_cadastral_land_area(
-		id: UUID,
+		land_area_id: UUID,
 		land_area: LandAreaRequestDTO,
 		session: AsyncSession = Depends(async_session_generator),
 ) -> LandAreaRequestDTO:
 	land_area_service: LandAreaService = LandAreaService(session)
 	land_area = await land_area_service.update_land_area_service(
-		id=id, **land_area.model_dump()
+		id=land_area_id, **land_area.model_dump()
 	)
 	return LandAreaRequestDTO.model_validate(land_area, from_attributes=True)
 
 
 @router.method(
 	errors=[
-		rpc_exceptions.AuthenticationError,
-		rpc_exceptions.TransactionError
+		rpc_exceptions.TransactionError,
+		rpc_exceptions.AuthenticationError
 	],
 	dependencies=[Depends(AuthenticationDependency())]
 )
-async def change_area_status(
-		land_area_id: UUID,
-		status_name: str,
+async def update_owner(
+		owner_id: UUID,
+		owner: OwnerRequestDTO,
 		session: AsyncSession = Depends(async_session_generator)
-) -> LandAreaResponseDTO:
-	land_area_service: LandAreaService = LandAreaService(session)
-	land_area = await land_area_service.update_status(land_area_id, status_name)
-	return LandAreaResponseDTO.model_validate(land_area, from_attributes=True)
+) -> OwnerResponseDTO:
+	owner_service.set_async_session(session)
+	orm_owner = await owner_service.update(owner_id, **owner.model_dump())
+	return OwnerResponseDTO.model_validate(orm_owner, from_attributes=True)
 
 
 @router.method(
 	errors=[
-		rpc_exceptions.AuthenticationError,
-		rpc_exceptions.TransactionError
+		rpc_exceptions.TransactionError,
+		rpc_exceptions.AuthenticationError
 	],
 	dependencies=[Depends(AuthenticationDependency())]
 )
-async def change_area_stage(
-		land_area_id: UUID,
-		stage_name: str,
+async def update_building(
+		building_id: UUID,
+		building: BuildingRequestDTO,
 		session: AsyncSession = Depends(async_session_generator)
-) -> LandAreaResponseDTO:
-	land_area_service: LandAreaService = LandAreaService(session)
-	land_area = await land_area_service.update_stage(land_area_id, stage_name)
-	return LandAreaResponseDTO.model_validate(land_area, from_attributes=True)
+) -> BuildingResponseDTO:
+	building_service.set_async_session(session)
+	orm_building = await building_service.update(
+		building_id, **building.model_dump())
+	return BuildingResponseDTO.model_validate(
+		orm_building, from_attributes=True)
+

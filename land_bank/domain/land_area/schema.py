@@ -1,6 +1,7 @@
 from domain.employee.schema import ShortEmployeeResponseDTO
-from pydantic import BaseModel, EmailStr, field_validator
-from typing import Optional, List
+from pydantic import BaseModel, EmailStr, Field, field_validator
+from domain.extra_data.schemas import ExtraDataResponseSchema
+from typing import Optional, List, Union
 from datetime import datetime
 from uuid import UUID
 import re
@@ -11,11 +12,19 @@ __all__ = [
 	'BuildingRequestDTO',
 	'LandAreaRelatedResponseDTO',
 	'LandAreaListResponseDTO',
-	'StageResponseDTO',
-	'StatusResponseDTO',
 	'ShortLandAreaResponseDTO',
-	'LandAreaResponseDTO'
+	'LandAreaResponseDTO',
+	'BuildingResponseDTO',
+	'OwnerResponseDTO'
 ]
+
+
+def _phone_number_validator(field: Union[str, None]) -> Union[str, None]:
+	if field is None:
+		return field
+	if re.match('^\\+?[1-9][0-9]{7,14}$', field) is None:
+		raise ValueError('Incorrect Phone Number')
+	return field
 
 
 class _InternalAreaCommentModel(BaseModel):
@@ -25,21 +34,16 @@ class _InternalAreaCommentModel(BaseModel):
 	employee: 'ShortEmployeeResponseDTO'
 
 
-class StageResponseDTO(BaseModel):
-	id: UUID
-	stage_name: str
-
-
-class StatusResponseDTO(BaseModel):
-	id: UUID
-	status_name: str
-
-
 class OwnerRequestDTO(BaseModel):
 	name: Optional[str] = None
 	email: Optional[EmailStr] = None
 	phone_number: str
 	location: Optional[str] = None
+
+	@field_validator('phone_number')
+	@classmethod
+	def validate_phone_number(cls, field: str):
+		return _phone_number_validator(field)
 
 
 class OwnerResponseDTO(OwnerRequestDTO):
@@ -71,6 +75,8 @@ class LandAreaRequestDTO(BaseModel):
 	area_square: float
 	address: Optional[str]
 	search_channel: str
+	working_status: str = Field('Новый')
+	stage: str = Field('Поиск')
 
 	@field_validator('cadastral_number')
 	@classmethod
@@ -91,16 +97,15 @@ class LandAreaRequestDTO(BaseModel):
 class LandAreaResponseDTO(LandAreaRequestDTO):
 	id: UUID
 	entered_at_base: datetime
-	working_status_id: UUID
-	stage_id: UUID
+	working_status: str
+	stage: str
 
 
 class LandAreaRelatedResponseDTO(LandAreaResponseDTO):
-	stage: 'StageResponseDTO'
-	status: 'StatusResponseDTO'
 	area_buildings: Optional[List['BuildingResponseDTO']] = None
 	owners: Optional[List['OwnerResponseDTO']] = None
 	comments: Optional[List['_InternalAreaCommentModel']] = None
+	extra_data: Optional['ExtraDataResponseSchema'] = None
 
 
 class LandAreaListResponseDTO(BaseModel):
@@ -110,6 +115,6 @@ class LandAreaListResponseDTO(BaseModel):
 	area_category: str
 	area_square: float
 	entered_at_base: datetime
-	status: 'StatusResponseDTO'
-	stage: 'StageResponseDTO'
+	working_status: str
+	stage: str
 	owners: List['OwnerResponseDTO']

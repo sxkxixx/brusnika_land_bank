@@ -21,4 +21,7 @@ class AreaCommentResponseDTO(AreaCommentRequestDTO):
 	id: UUID
 	employee_id: UUID
 	created_at: datetime
+
+
+class AreaCommentRelatedResponseDTO(AreaCommentResponseDTO):
 	employee: 'ShortEmployeeResponseDTO'

@@ -9,9 +9,9 @@ from infrastructure.database.model import AreaComment, Employee
 from infrastructure.exception import rpc_exceptions
 from infrastructure.database.session import async_session_generator
 from domain.area_comment import (
-	AreaCommentResponseDTO,
+	AreaCommentRelatedResponseDTO,
 	AreaCommentRequestDTO,
-	CommentService
+	AreaCommentResponseDTO, CommentService
 )
 
 router = Entrypoint(
@@ -72,12 +72,9 @@ async def edit_area_comment(
 	]
 )
 async def delete_area_comment(
-		area_comment_id: UUID,
+		comment_id: UUID,
 		employee: Employee = Depends(AuthenticationDependency()),
 		session: AsyncSession = Depends(async_session_generator)
-) -> dict:
+) -> None:
 	_comment_service: CommentService = CommentService(session)
-	result = await _comment_service.delete_comment(
-		area_comment_id, employee.id)
-	print(result)
-	return {'area_comment_id': area_comment_id, 'status': 'deleted'}
+	await _comment_service.delete_comment(comment_id, employee.id)
