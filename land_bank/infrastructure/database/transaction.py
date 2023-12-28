@@ -19,11 +19,13 @@ def in_transaction(func: Union[Coroutine, Callable]):
 	ASYNC_CONTEXT_SESSION.set(async_session)
 	logging.info(
 		f'Transaction session is_active='
-		f'{ASYNC_CONTEXT_SESSION.get().is_active}')
+		f'{ASYNC_CONTEXT_SESSION.get().is_active}, '
+		f'Function Name: {func.__name__}'
+	)
 
 	@wraps(func)
 	async def wrapper(*args, **kwargs):
-		logging.info(f'Transaction: {func.__name__}')
+		logging.info(f'Transaction: Function Name: {func.__name__}')
 		try:
 			result = await func(*args, **kwargs)
 			await async_session.commit()
@@ -37,6 +39,6 @@ def in_transaction(func: Union[Coroutine, Callable]):
 			raise rpc_exceptions.TransactionError(data=str(e))
 		finally:
 			await async_session.close()
-			logging.error(f'Session closed: {func.__name__}')
+			logging.info(f'Session closed: {func.__name__}')
 
 	return wrapper

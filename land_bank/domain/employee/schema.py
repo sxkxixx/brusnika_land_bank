@@ -35,6 +35,11 @@ class EmployeeLoginSchema(BaseModel):
 	email: EmailStr
 	password: str
 
+	@field_validator('email')
+	@classmethod
+	def email_lower(cls, field: str):
+		return field.lower()
+
 
 class EmployeeCreateSchema(EmployeeLoginSchema):
 	password_repeat: str
