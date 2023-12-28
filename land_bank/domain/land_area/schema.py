@@ -54,7 +54,7 @@ class OwnerResponseDTO(OwnerRequestDTO):
 class BuildingRequestDTO(BaseModel):
 	name: str
 	description: Optional[str] = None
-	commissioning_year: str
+	commissioning_year: Optional[int] = None
 
 
 class BuildingResponseDTO(BuildingRequestDTO):

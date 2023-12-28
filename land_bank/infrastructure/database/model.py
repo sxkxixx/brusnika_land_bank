@@ -231,8 +231,8 @@ class Building(Base):
 	description: Mapped[Optional[str]] = mapped_column(
 		sqlalchemy.String(length=128), nullable=True
 	)
-	commissioning_year: Mapped[str] = mapped_column(
-		sqlalchemy.String(length=4), nullable=False
+	commissioning_year: Mapped[int] = mapped_column(
+		sqlalchemy.Integer, nullable=True
 	)
 	land_area_id: Mapped[UUID] = mapped_column(
 		sqlalchemy.ForeignKey('cadastral_land_area.id', ondelete='CASCADE'),
