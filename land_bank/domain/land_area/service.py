@@ -99,7 +99,8 @@ class LandAreaService:
 				options=[
 					selectinload(LandArea.area_buildings),
 					selectinload(LandArea.owners),
-					selectinload(LandArea.comments)
+					selectinload(LandArea.comments),
+					selectinload(LandArea.extra_data)
 				])
 		except Exception as e:
 			await self.session.rollback()
