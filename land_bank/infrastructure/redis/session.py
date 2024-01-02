@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Type, Union
+from typing import Optional, Type, Union
 from uuid import uuid4
 
 import aioredis
@@ -50,7 +50,7 @@ class RedisService:
     async def get_by_key(
             key: str,
             _class: Type['RedisObject']
-    ) -> Union['RedisObject', None]:
+    ) -> Optional['RedisObject']:
         json_encoded: str = await redis.get(key)
         if not json_encoded:
             return None

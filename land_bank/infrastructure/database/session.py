@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import (
 from infrastructure.settings import DatabaseSettings
 from typing import AsyncGenerator
 
-
 DATABASE_URL = (
 	f'postgresql+asyncpg://'
 	f'{DatabaseSettings.POSTGRES_USER}'

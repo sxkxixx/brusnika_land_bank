@@ -1,12 +1,11 @@
 from typing import Annotated, Optional
 from fastapi import Header
+from jose import JWTError
 
-from domain.employee.service import EmployeeService
 from .token import TokenService
 from infrastructure.database.model import Employee
-from infrastructure.database.session import async_session
 from infrastructure.exception import rpc_exceptions
-from jose import JWTError
+from domain.employee.repository import EmployeeRepository
 
 __all__ = [
 	'AuthenticationDependency',
@@ -26,8 +25,7 @@ def _get_token_payload(access_token: str) -> dict:
 class AuthenticationDependency:
 	def __init__(self, is_strict: bool = True):
 		self.__is_strict: bool = is_strict
-		self.__employee_service: EmployeeService = EmployeeService()
-		self.__employee_service.set_async_session(async_session())
+		self.__employee_repository: EmployeeRepository = EmployeeRepository()
 
 	async def __call__(
 			self,
@@ -45,7 +43,7 @@ class AuthenticationDependency:
 			raise rpc_exceptions.AuthenticationError(
 				data='No access token there')
 		payload = _get_token_payload(access_token)
-		employee: Optional[Employee] = await self.__employee_service.get_employee(
+		employee: Optional[Employee] = await self.__employee_repository.get_employee(
 			Employee.email == payload.get('email')
 		)
 		if employee is None:
@@ -68,8 +66,7 @@ class AuthenticationDependency:
 class AuthorizationDependency:
 	def __init__(self, permission_name: str):
 		self.__permission_name = permission_name
-		self.__service: EmployeeService = EmployeeService()
-		self.__service.set_async_session(async_session())
+		self.__employee_repository: EmployeeRepository = EmployeeRepository()
 
 	async def __call__(
 			self,
@@ -77,7 +74,7 @@ class AuthorizationDependency:
 	):
 		payload = _get_token_payload(authorization)
 		employee: Employee = await (
-			self.__service.get_employee_with_permissions(
+			self.__employee_repository.get_employee_with_permissions(
 				Employee.email == payload.get('email')))
 		if employee is None:
 			raise rpc_exceptions.AuthenticationError(

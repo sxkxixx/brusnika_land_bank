@@ -23,8 +23,7 @@ class EmployeeService:
 	def set_async_session(self, session: AsyncSession) -> None:
 		self.session: AsyncSession = session
 		self.__employee_repository: SQLAlchemyRepository = (
-			SQLAlchemyRepository(
-			session, Employee))
+			SQLAlchemyRepository(Employee))
 
 	async def create_employee(
 			self, **data) -> Employee:

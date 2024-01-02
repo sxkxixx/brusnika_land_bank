@@ -14,18 +14,17 @@ logging.basicConfig(
 
 
 def in_transaction(func: Union[Coroutine, Callable]):
-	# TODO: Переписать работу с базой, использую декоратор in_transaction
-	async_session: AsyncSession = get_async_session()
-	ASYNC_CONTEXT_SESSION.set(async_session)
-	logging.info(
-		f'Transaction session is_active='
-		f'{ASYNC_CONTEXT_SESSION.get().is_active}, '
-		f'Function Name: {func.__name__}'
-	)
-
+	# TODO: Переписать работу с базой, используя декоратор in_transaction
 	@wraps(func)
 	async def wrapper(*args, **kwargs):
-		logging.info(f'Transaction: Function Name: {func.__name__}')
+		async_session: AsyncSession = get_async_session()
+		ASYNC_CONTEXT_SESSION.set(async_session)
+
+		logging.info(
+			f'Transaction session is_active='
+			f'{ASYNC_CONTEXT_SESSION.get().is_active}, '
+			f'Function Name: {func.__name__}'
+		)
 		try:
 			result = await func(*args, **kwargs)
 			await async_session.commit()
@@ -33,12 +32,11 @@ def in_transaction(func: Union[Coroutine, Callable]):
 			return result
 		except (IntegrityError, PendingRollbackError) as e:
 			logging.error(
-				f'Transaction error: error type = {type(e)}, errors msg = '
-				f'{str(e)}')
+				f'Transaction error: error type = {type(e)}, '
+				f'errors msg = {str(e)}')
 			await async_session.rollback()
 			raise rpc_exceptions.TransactionError(data=str(e))
 		finally:
 			await async_session.close()
 			logging.info(f'Session closed: {func.__name__}')
-
 	return wrapper

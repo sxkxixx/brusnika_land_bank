@@ -9,34 +9,40 @@ from infrastructure.database.model import DatabaseEntity
 class SQLAlchemyRepository(Repository):
 	def __init__(
 			self,
-			session: AsyncSession,
 			model: Generic[DatabaseEntity]
 	):
 		"""
 		:param session: Сессия
 		:param model: Модель
 		"""
-		self.__session: AsyncSession = session
+		self.__session: AsyncSession = None
 		self.__model: Generic[DatabaseEntity] = model
 
-	async def create_record(self, **kwargs) -> DatabaseEntity:
+	async def create_record(
+			self,
+			session: AsyncSession,
+			**kwargs
+	) -> DatabaseEntity:
 		"""
 		Создает запись в базе данных и возвращает её
+		:param session: Сессия БД
 		:param kwargs: Значения
 		:return: Новую запись в БД
 		"""
-		statement = insert(self.__model).values(**kwargs).returning(self.__model)
-		result = await self.__session.scalar(statement)
+		statement = insert(self.__model).values(**kwargs).returning(
+			self.__model)
+		result = await session.scalar(statement)
 		return result
 
-	async def get_record(self, *filters) -> DatabaseEntity:
+	async def get_record(self, session: AsyncSession, *filters) -> DatabaseEntity:
 		"""
 		Возвращает запись по фильтрам
+		:param session: Сессия БД
 		:param filters: Параметры фильтрации
 		:return: Запись
 		"""
 		statement = select(self.__model).where(*filters)
-		result = await self.__session.scalar(statement)
+		result = await session.scalar(statement)
 		return result
 
 	async def full_select_records(
@@ -66,7 +72,8 @@ class SQLAlchemyRepository(Repository):
 		result = await self.__session.execute(statement)
 		return result.scalars().all()
 
-	async def select_records(self, *, filters, options) -> Iterable[DatabaseEntity]:
+	async def select_records(self, *, filters, options) -> Iterable[
+		DatabaseEntity]:
 		statement = select(self.__model).where(*filters).options(*options)
 		result = await self.__session.scalars(statement)
 		return result
@@ -106,17 +113,19 @@ class SQLAlchemyRepository(Repository):
 
 	async def get_record_with_relationships(
 			self,
+			session: AsyncSession,
 			*,
 			filters,
 			options
 	) -> DatabaseEntity:
 		"""
+		:param session: Сессия БД
 		:param filters: Параметры фильтрации
 		:param options: Параметры подгрузки отношений
 		:return:
 		"""
 		statement = select(self.__model).where(*filters).options(*options)
-		return await self.__session.scalar(statement)
+		return await session.scalar(statement)
 
 	async def get_or_create_record(self, **kwargs) -> DatabaseEntity:
 		record = await self.__session.scalar(
