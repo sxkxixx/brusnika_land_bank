@@ -2,10 +2,12 @@ from typing import Annotated, Optional
 from fastapi import Header
 from jose import JWTError
 
+from infrastructure.database.session import ASYNC_CONTEXT_SESSION
+from infrastructure.database.transaction import in_transaction
+from storage.employee import EmployeeRepository
 from .token import TokenService
 from infrastructure.database.model import Employee
 from infrastructure.exception import rpc_exceptions
-from domain.employee.repository import EmployeeRepository
 
 __all__ = [
 	'AuthenticationDependency',
@@ -25,7 +27,7 @@ def _get_token_payload(access_token: str) -> dict:
 class AuthenticationDependency:
 	def __init__(self, is_strict: bool = True):
 		self.__is_strict: bool = is_strict
-		self.__employee_repository: EmployeeRepository = EmployeeRepository()
+		self.__repository: EmployeeRepository = EmployeeRepository()
 
 	async def __call__(
 			self,
@@ -35,6 +37,7 @@ class AuthenticationDependency:
 			return await self.__strict_auth(authorization)
 		return await self.__soft_auth(authorization)
 
+	@in_transaction
 	async def __strict_auth(
 			self,
 			access_token: str,
@@ -43,8 +46,8 @@ class AuthenticationDependency:
 			raise rpc_exceptions.AuthenticationError(
 				data='No access token there')
 		payload = _get_token_payload(access_token)
-		employee: Optional[Employee] = await self.__employee_repository.get_employee(
-			Employee.email == payload.get('email')
+		employee: Optional[Employee] = await self.__repository.get_employee(
+			ASYNC_CONTEXT_SESSION.get(), Employee.email == payload.get('email')
 		)
 		if employee is None:
 			raise rpc_exceptions.AuthenticationError(

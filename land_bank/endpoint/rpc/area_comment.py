@@ -3,21 +3,19 @@ from uuid import UUID
 from fastapi import Depends
 from fastapi_jsonrpc import Entrypoint
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from infrastructure.database.transaction import in_transaction
+from infrastructure.database.session import ASYNC_CONTEXT_SESSION
 from application.auth.dependency import AuthenticationDependency
 from infrastructure.database.model import AreaComment, Employee
 from infrastructure.exception import rpc_exceptions
-from infrastructure.database.session import async_session_generator
-from domain.area_comment import (
-	AreaCommentRelatedResponseDTO,
-	AreaCommentRequestDTO,
-	AreaCommentResponseDTO, CommentService
-)
+from domain.area_comment import AreaCommentRequestDTO, AreaCommentResponseDTO
+from storage.area_comment import AreaCommentRepository
 
 router = Entrypoint(
 	path='/api/v1/area_comment',
 	tags=['AREA COMMENT']
 )
+area_comment_repository = AreaCommentRepository()
 
 
 @router.method(
@@ -26,15 +24,14 @@ router = Entrypoint(
 		rpc_exceptions.TransactionError
 	]
 )
+@in_transaction
 async def upload_area_comment(
 		comment: AreaCommentRequestDTO,
 		employee: Employee = Depends(AuthenticationDependency()),
-		session: AsyncSession = Depends(async_session_generator)
 ) -> AreaCommentResponseDTO:
-	comment_service: CommentService = CommentService(session)
-	area_comment: AreaComment = await comment_service.create_comment(
-		employee_id=employee.id,
-		**comment.model_dump()
+	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
+	area_comment: AreaComment = await area_comment_repository.create_comment(
+		session, employee_id=employee.id, **comment.model_dump()
 	)
 	return AreaCommentResponseDTO.model_validate(
 		area_comment,
@@ -48,16 +45,21 @@ async def upload_area_comment(
 		rpc_exceptions.TransactionError
 	]
 )
+@in_transaction
 async def edit_area_comment(
 		comment_id: UUID,
 		comment_text: str,
-		session: AsyncSession = Depends(async_session_generator),
 		employee: Employee = Depends(AuthenticationDependency()),
 ) -> AreaCommentResponseDTO:
-	comment_service: CommentService = CommentService(session)
-	area_comment = await comment_service.edit_comment(
-		comment_id, employee.id,
-		comment_text=comment_text
+	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
+	comment: AreaComment = await area_comment_repository.get_comment(
+		session, AreaComment.id == comment_id
+	)
+	if comment.employee_id != employee.id:
+		# TODO: вывести нормальную ошибку
+		raise Exception()
+	area_comment = await area_comment_repository.edit_comment(
+		session, comment.id, comment_text=comment_text
 	)
 	return AreaCommentResponseDTO.model_validate(
 		area_comment,
@@ -71,10 +73,17 @@ async def edit_area_comment(
 		rpc_exceptions.TransactionError
 	]
 )
+@in_transaction
 async def delete_area_comment(
 		comment_id: UUID,
 		employee: Employee = Depends(AuthenticationDependency()),
-		session: AsyncSession = Depends(async_session_generator)
 ) -> None:
-	_comment_service: CommentService = CommentService(session)
-	await _comment_service.delete_comment(comment_id, employee.id)
+	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
+	comment: AreaComment = await area_comment_repository.get_comment(
+		session, AreaComment.id == comment_id
+	)
+	if comment.employee_id != employee.id:
+		# TODO: Вывести нормальную ошибку
+		raise Exception("нельзя удалять не свои комменты")
+	await area_comment_repository.delete_comment(session, comment)
+	return None

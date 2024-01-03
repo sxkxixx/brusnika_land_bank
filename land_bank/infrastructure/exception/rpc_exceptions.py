@@ -50,7 +50,7 @@ class AuthorizationError(BaseError):
 	MESSAGE = 'Authorization Error'
 
 
-class ObjectDoesNotExistsError(BaseError):
+class ObjectNotFoundError(BaseError):
 	"""
 	Ошибка если сущность не существует
 	HTTP Аналог - 404 Not found

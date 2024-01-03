@@ -2,6 +2,8 @@ from typing import Annotated, Optional
 import fastapi_jsonrpc as jsonrpc
 from datetime import datetime
 from fastapi import Depends, Header, Cookie, Response
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from application.auth import (
 	Hasher,
 	TokenService,
@@ -13,13 +15,14 @@ from application.message import PasswordResetMessage
 from domain.token import TokenResponseSchema
 from domain.employee import *
 from domain.email_message.schemas import *
-from domain.employee.repository import EmployeeRepository
 
 from infrastructure.celery import send_message
+from infrastructure.database.session import ASYNC_CONTEXT_SESSION
+from infrastructure.database.transaction import in_transaction
 from infrastructure.redis import RedisService
 from infrastructure.database.model import Employee
 from infrastructure.exception import rpc_exceptions
-
+from storage.employee import EmployeeRepository
 
 router = jsonrpc.Entrypoint(path='/api/v1/auth', tags=['AUTH'])
 redis_service = RedisService()
@@ -27,24 +30,28 @@ employee_repository: EmployeeRepository = EmployeeRepository()
 
 
 @router.method(errors=[rpc_exceptions.UniqueEmailError])
+@in_transaction
 async def register_user(
 		user: EmployeeCreateSchema,
 ) -> EmployeeReadSchema:
+	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
 	employee: Employee = await employee_repository.create_user(
-		**user.model_dump())
+		session, **user.model_dump())
 	return EmployeeReadSchema.model_validate(employee, from_attributes=True)
 
 
 @router.method(errors=[rpc_exceptions.LoginError])
+@in_transaction
 async def login_user(
 		data: EmployeeLoginSchema,
 		user_agent: Annotated[str, Header()],
 		response: Response,
 ) -> TokenResponseSchema:
 	try:
+		session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
 		employee: Employee = await employee_repository.get_employee(
-			Employee.email == data.email)
-	except rpc_exceptions.ObjectDoesNotExistsError:
+			session, Employee.email == data.email)
+	except rpc_exceptions.ObjectNotFoundError:
 		raise rpc_exceptions.LoginError(data="User does not exist")
 	if not Hasher.verify_password(data.password, employee.hashed_password):
 		raise rpc_exceptions.LoginError(data="Incorrect password")
@@ -61,6 +68,7 @@ async def login_user(
 
 
 @router.method(errors=[rpc_exceptions.AuthenticationError])
+@in_transaction
 async def refresh_session(
 		response: Response,
 		user_agent: Annotated[str, Header()],
@@ -74,8 +82,9 @@ async def refresh_session(
 	if session.user_agent != user_agent:
 		raise rpc_exceptions.AuthenticationError(
 			data='User-Agent is incorrect')
+	async_db_session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
 	employee: Employee = await employee_repository.get_employee(
-		Employee.id == session.user_id)
+		async_db_session, Employee.id == session.user_id)
 	if not employee:
 		raise rpc_exceptions.AuthenticationError(
 			data='User not exists by this refresh token')
@@ -121,7 +130,7 @@ async def get_password_reset_email_message(
 		Employee.email == data.email
 	)
 	if not employee:
-		raise rpc_exceptions.ObjectDoesNotExistsError(
+		raise rpc_exceptions.ObjectNotFoundError(
 			'No user by this email not exists'
 		)
 	message = PasswordResetMessage(

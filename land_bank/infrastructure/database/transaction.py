@@ -1,11 +1,11 @@
+from typing import Coroutine, Callable, Union
 from functools import wraps
+import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import IntegrityError, PendingRollbackError
-from .session import ASYNC_CONTEXT_SESSION, get_async_session
-from typing import Coroutine, Callable, Union
-import logging
 from infrastructure.exception import rpc_exceptions
+from .session import ASYNC_CONTEXT_SESSION, get_async_session
+from sqlalchemy.exc import IntegrityError, PendingRollbackError
 
 logging.basicConfig(
 	level=logging.INFO,

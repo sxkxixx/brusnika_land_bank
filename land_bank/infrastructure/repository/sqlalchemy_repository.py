@@ -11,11 +11,7 @@ class SQLAlchemyRepository(Repository):
 			self,
 			model: Generic[DatabaseEntity]
 	):
-		"""
-		:param session: Сессия
-		:param model: Модель
-		"""
-		self.__session: AsyncSession = None
+		""":param model: Модель"""
 		self.__model: Generic[DatabaseEntity] = model
 
 	async def create_record(
@@ -34,7 +30,11 @@ class SQLAlchemyRepository(Repository):
 		result = await session.scalar(statement)
 		return result
 
-	async def get_record(self, session: AsyncSession, *filters) -> DatabaseEntity:
+	async def get_record(
+			self,
+			session: AsyncSession,
+			*filters
+	) -> DatabaseEntity:
 		"""
 		Возвращает запись по фильтрам
 		:param session: Сессия БД
@@ -47,6 +47,7 @@ class SQLAlchemyRepository(Repository):
 
 	async def full_select_records(
 			self,
+			session: AsyncSession,
 			filters,
 			options,
 			orders,
@@ -54,6 +55,7 @@ class SQLAlchemyRepository(Repository):
 	) -> Iterable[DatabaseEntity]:
 		"""
 		Выбирает записи с параметрами фильтрации, отношениями и сортировками
+		:param session: Сессия БД
 		:param filters: Параметры фильтрации
 		:param options: Параметры для выбора отношений
 		:param orders: Параметры для сортировки
@@ -69,17 +71,22 @@ class SQLAlchemyRepository(Repository):
 			.offset(offset)
 			.limit(limit)
 		)
-		result = await self.__session.execute(statement)
+		result = await session.execute(statement)
 		return result.scalars().all()
 
-	async def select_records(self, *, filters, options) -> Iterable[
-		DatabaseEntity]:
+	async def select_records(
+			self,
+			session: AsyncSession,
+			filters,
+			options
+	) -> Iterable[DatabaseEntity]:
 		statement = select(self.__model).where(*filters).options(*options)
-		result = await self.__session.scalars(statement)
+		result = await session.scalars(statement)
 		return result
 
 	async def select_ordered_records(
 			self,
+			session: AsyncSession,
 			offset: int,
 			limit: int,
 			options: Optional[List] = None,
@@ -92,12 +99,14 @@ class SQLAlchemyRepository(Repository):
 			.offset(offset)
 			.limit(limit)
 		)
-		result = await self.__session.scalars(statement)
+		result = await session.scalars(statement)
 		return result.all()
 
-	async def update_record(self, *filters, **values_set) -> DatabaseEntity:
+	async def update_record(self, session: AsyncSession, *filters,
+							**values_set) -> DatabaseEntity:
 		"""
 		Обновляет запись и возвращает её
+		:param session: Сессия БД
 		:param filters: Параметры фильтрации
 		:param values_set: Параметры для установки
 		:return: Возвращает обновлённую запись
@@ -108,13 +117,12 @@ class SQLAlchemyRepository(Repository):
 			.values(**values_set)
 			.returning(self.__model)
 		)
-		result = await self.__session.execute(statement)
+		result = await session.execute(statement)
 		return result.scalar()
 
 	async def get_record_with_relationships(
 			self,
 			session: AsyncSession,
-			*,
 			filters,
 			options
 	) -> DatabaseEntity:
@@ -127,14 +135,9 @@ class SQLAlchemyRepository(Repository):
 		statement = select(self.__model).where(*filters).options(*options)
 		return await session.scalar(statement)
 
-	async def get_or_create_record(self, **kwargs) -> DatabaseEntity:
-		record = await self.__session.scalar(
-			select(self.__model).filter_by(**kwargs))
-		if not record:
-			record = await self.create_record(**kwargs)
-		return record
-
-	async def delete_record(self, *filters):
-		statement = delete(self.__model).where(*filters)
-		result = await self.__session.execute(statement)
-		return result
+	async def delete_record(
+			self,
+			session: AsyncSession,
+			instance: 'DatabaseEntity'
+	) -> None:
+		await self.delete_record(session, instance)
