@@ -29,6 +29,8 @@ def _phone_number_validator(field: Union[str, None]) -> Union[str, None]:
 
 class _InternalAreaCommentModel(BaseModel):
 	id: UUID
+	comment_text: str
+	land_area_id: UUID
 	employee_id: UUID
 	created_at: datetime
 	employee: 'ShortEmployeeResponseDTO'

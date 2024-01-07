@@ -56,8 +56,8 @@ async def edit_area_comment(
 		session, AreaComment.id == comment_id
 	)
 	if comment.employee_id != employee.id:
-		# TODO: вывести нормальную ошибку
-		raise Exception()
+		raise rpc_exceptions.TransactionForbiddenError(
+			data="Not allowed to update another owner comment")
 	area_comment = await area_comment_repository.edit_comment(
 		session, comment.id, comment_text=comment_text
 	)
@@ -83,7 +83,7 @@ async def delete_area_comment(
 		session, AreaComment.id == comment_id
 	)
 	if comment.employee_id != employee.id:
-		# TODO: Вывести нормальную ошибку
-		raise Exception("нельзя удалять не свои комменты")
+		raise rpc_exceptions.TransactionForbiddenError(
+			data="Not allowed to delete another owner comment")
 	await area_comment_repository.delete_comment(session, comment)
 	return None

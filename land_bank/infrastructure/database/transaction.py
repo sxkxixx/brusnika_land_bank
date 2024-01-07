@@ -1,3 +1,4 @@
+from fastapi_jsonrpc import BaseError
 from typing import Coroutine, Callable, Union
 from functools import wraps
 import logging
@@ -14,7 +15,6 @@ logging.basicConfig(
 
 
 def in_transaction(func: Union[Coroutine, Callable]):
-	# TODO: Переписать работу с базой, используя декоратор in_transaction
 	@wraps(func)
 	async def wrapper(*args, **kwargs):
 		async_session: AsyncSession = get_async_session()
@@ -30,6 +30,10 @@ def in_transaction(func: Union[Coroutine, Callable]):
 			await async_session.commit()
 			logging.info(f'Transaction success: {func.__name__}')
 			return result
+		except BaseError as rpc_error:
+			logging.error(f'Transaction error: {type(BaseError)}')
+			await async_session.rollback()
+			raise rpc_error
 		except (IntegrityError, PendingRollbackError) as e:
 			logging.error(
 				f'Transaction error: error type = {type(e)}, '

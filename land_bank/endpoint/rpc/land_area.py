@@ -18,7 +18,13 @@ from storage.building import BuildingRepository
 from storage.land_area import LandAreaRepository
 from storage.owner import OwnerRepository
 
-router = jsonrpc.Entrypoint(path='/api/v1/areas', tags=['AREAS'])
+router = jsonrpc.Entrypoint(
+	path='/api/v1/areas',
+	tags=['AREAS'],
+	dependencies=[
+		Depends(AuthenticationDependency())
+	]
+)
 owner_repository: OwnerRepository = OwnerRepository()
 building_repository: BuildingRepository = BuildingRepository()
 land_area_repository: LandAreaRepository = LandAreaRepository()
@@ -26,7 +32,6 @@ land_area_repository: LandAreaRepository = LandAreaRepository()
 
 @router.method(
 	errors=[rpc_exceptions.AuthenticationError],
-	dependencies=[Depends(AuthenticationDependency())]
 )
 @in_transaction
 async def select_land_area(
@@ -50,18 +55,18 @@ async def select_land_area(
 		rpc_exceptions.AuthenticationError,
 		rpc_exceptions.ObjectNotFoundError
 	],
-	dependencies=[Depends(AuthenticationDependency())]
 )
 @in_transaction
 async def get_land_area(
-		land_area_id: UUID,
+		land_area_id: UUID
 ) -> LandAreaRelatedResponseDTO:
 	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
-	land_area: Optional[LandArea] = await land_area_repository.get_land_area(
-		session, LandArea.id == land_area_id)
+	land_area: Optional[LandArea] = await land_area_repository.get_land_area_relations(
+		session, land_area_id)
 	if not land_area:
 		raise rpc_exceptions.ObjectNotFoundError(
-			data='No such land area by this id')
+			data='No such land area by this id'
+		)
 
 	return LandAreaRelatedResponseDTO.model_validate(
 		land_area,
@@ -71,7 +76,6 @@ async def get_land_area(
 
 @router.method(
 	errors=[rpc_exceptions.AuthenticationError],
-	dependencies=[Depends(AuthenticationDependency())]
 )
 @in_transaction
 async def create_cadastral_land_area(
@@ -106,7 +110,6 @@ async def create_cadastral_land_area(
 		rpc_exceptions.AuthenticationError,
 		rpc_exceptions.TransactionError
 	],
-	dependencies=[Depends(AuthenticationDependency())]
 )
 @in_transaction
 async def update_cadastral_land_area(
@@ -125,7 +128,6 @@ async def update_cadastral_land_area(
 		rpc_exceptions.TransactionError,
 		rpc_exceptions.AuthenticationError
 	],
-	dependencies=[Depends(AuthenticationDependency())]
 )
 @in_transaction
 async def update_owner(
@@ -143,7 +145,6 @@ async def update_owner(
 		rpc_exceptions.TransactionError,
 		rpc_exceptions.AuthenticationError
 	],
-	dependencies=[Depends(AuthenticationDependency())]
 )
 @in_transaction
 async def update_building(
@@ -155,3 +156,47 @@ async def update_building(
 		session, building_id, **building.model_dump())
 	return BuildingResponseDTO.model_validate(
 		orm_building, from_attributes=True)
+
+
+@router.method(
+	errors=[
+		rpc_exceptions.TransactionError,
+		rpc_exceptions.AuthenticationError,
+	],
+)
+@in_transaction
+async def add_owner(
+		land_area_id: UUID,
+		owner_schema: OwnerRequestDTO
+) -> OwnerResponseDTO:
+	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
+	land_area: LandArea = await land_area_repository.get_record(
+		session, LandArea.id == land_area_id)
+	if not land_area:
+		raise rpc_exceptions.ObjectNotFoundError(
+			data='No such Land Area by this id')
+	owner: LandOwner = await owner_repository.create_owner(
+		session, **owner_schema.model_dump(), land_area_id=land_area_id)
+	return OwnerResponseDTO.model_validate(owner, from_attributes=True)
+
+
+@router.method(
+	errors=[
+		rpc_exceptions.TransactionError,
+		rpc_exceptions.AuthenticationError,
+	],
+)
+@in_transaction
+async def add_building(
+		land_area_id: UUID,
+		building_schema: BuildingRequestDTO
+) -> BuildingResponseDTO:
+	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
+	land_area: LandArea = await land_area_repository.get_record(
+		session, LandArea.id == land_area_id)
+	if not land_area:
+		raise rpc_exceptions.ObjectNotFoundError(
+			data='No such Land Area by this id')
+	building: Building = await building_repository.create_building(
+		session, **building_schema.model_dump(), land_area_id=land_area_id)
+	return BuildingResponseDTO.model_validate(building, from_attributes=True)

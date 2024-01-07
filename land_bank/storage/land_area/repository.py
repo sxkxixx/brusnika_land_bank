@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from domain.request_params.schema import LimitOffset, SortParams
-from infrastructure.database.model import LandArea
+from infrastructure.database.model import AreaComment, LandArea
 from infrastructure.repository.sqlalchemy_repository import SQLAlchemyRepository
 
 __all__ = ['LandAreaRepository']
@@ -52,14 +52,14 @@ class LandAreaRepository(SQLAlchemyRepository):
 		return await self.get_record_with_relationships(
 			session, filters, options)
 
-	async def get_land_area_relations(self, session, land_area_id) -> LandArea:
+	async def get_land_area_relations(self, session, land_area_id: UUID) -> LandArea:
 		return await self.get_record_with_relationships(
 			session,
 			filters=[LandArea.id == land_area_id],
 			options=[
 				selectinload(LandArea.area_buildings),
 				selectinload(LandArea.owners),
-				selectinload(LandArea.comments),
+				selectinload(LandArea.comments).selectinload(AreaComment.employee),
 				selectinload(LandArea.extra_data)
 			]
 		)
