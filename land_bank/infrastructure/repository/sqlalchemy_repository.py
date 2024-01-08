@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from .interface import Repository
-from sqlalchemy import insert, select, update, delete
-from typing import Generic, Iterable, List, Optional
+from sqlalchemy import Executable, insert, select, update
+from typing import Iterable, List, Optional, Type
 
 from infrastructure.database.model import DatabaseEntity
 
@@ -9,10 +9,10 @@ from infrastructure.database.model import DatabaseEntity
 class SQLAlchemyRepository(Repository):
 	def __init__(
 			self,
-			model: Generic[DatabaseEntity]
+			model: Type[DatabaseEntity]
 	):
 		""":param model: Модель"""
-		self.__model: Generic[DatabaseEntity] = model
+		self.__model: Type[DatabaseEntity] = model
 
 	async def create_record(
 			self,
@@ -25,7 +25,8 @@ class SQLAlchemyRepository(Repository):
 		:param kwargs: Значения
 		:return: Новую запись в БД
 		"""
-		statement = insert(self.__model).values(**kwargs).returning(
+		statement: Executable = insert(self.__model).values(
+			**kwargs).returning(
 			self.__model)
 		result = await session.scalar(statement)
 		return result
@@ -41,7 +42,7 @@ class SQLAlchemyRepository(Repository):
 		:param filters: Параметры фильтрации
 		:return: Запись
 		"""
-		statement = select(self.__model).where(*filters)
+		statement: Executable = select(self.__model).where(*filters)
 		result = await session.scalar(statement)
 		return result
 
@@ -63,7 +64,7 @@ class SQLAlchemyRepository(Repository):
 		:return: Список записей
 		"""
 		limit, offset = kwargs.get('limit'), kwargs.get('offset')
-		statement = (
+		statement: Executable = (
 			select(self.__model)
 			.where(*filters)
 			.options(*options)
@@ -80,7 +81,11 @@ class SQLAlchemyRepository(Repository):
 			filters,
 			options
 	) -> Iterable[DatabaseEntity]:
-		statement = select(self.__model).where(*filters).options(*options)
+		statement: Executable = (
+			select(self.__model)
+			.where(*filters)
+			.options(*options)
+		)
 		result = await session.scalars(statement)
 		return result
 
@@ -92,8 +97,8 @@ class SQLAlchemyRepository(Repository):
 			options: Optional[List] = None,
 			orders: Optional[List] = None,
 	) -> Iterable[DatabaseEntity]:
-		statement = (
-			select(self.__model)
+		statement: Executable = (
+			select(self.__model)  # type: ignore
 			.options(*options)
 			.order_by(*orders)
 			.offset(offset)
@@ -102,8 +107,12 @@ class SQLAlchemyRepository(Repository):
 		result = await session.scalars(statement)
 		return result.all()
 
-	async def update_record(self, session: AsyncSession, *filters,
-							**values_set) -> DatabaseEntity:
+	async def update_record(
+			self,
+			session: AsyncSession,
+			*filters,
+			**values_set
+	) -> DatabaseEntity | None:
 		"""
 		Обновляет запись и возвращает её
 		:param session: Сессия БД
@@ -111,7 +120,7 @@ class SQLAlchemyRepository(Repository):
 		:param values_set: Параметры для установки
 		:return: Возвращает обновлённую запись
 		"""
-		statement = (
+		statement: Executable = (
 			update(self.__model)
 			.where(*filters)
 			.values(**values_set)
@@ -125,14 +134,15 @@ class SQLAlchemyRepository(Repository):
 			session: AsyncSession,
 			filters,
 			options
-	) -> DatabaseEntity:
+	) -> Optional[DatabaseEntity]:
 		"""
 		:param session: Сессия БД
 		:param filters: Параметры фильтрации
 		:param options: Параметры подгрузки отношений
 		:return:
 		"""
-		statement = select(self.__model).where(*filters).options(*options)
+		statement: Executable = select(self.__model).where(*filters).options(
+			*options)
 		return await session.scalar(statement)
 
 	async def delete_record(

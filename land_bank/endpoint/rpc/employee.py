@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import Optional
 from uuid import UUID
 
 from fastapi import Depends
@@ -33,11 +34,11 @@ async def get_profile(
 ) -> EmployeeRelatedResponse:
 	"""Профиль текущего пользователя"""
 	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
-	employee: Employee = await employee_repository.employee_profile(
+	profile_data: Optional[Employee] = await employee_repository.employee_profile(
 		session, employee.id
 	)
 	return EmployeeRelatedResponse.model_validate(
-		employee, from_attributes=True)
+		profile_data, from_attributes=True)
 
 
 @router.method(
@@ -50,8 +51,10 @@ async def get_employee_profile_by_id(
 ) -> EmployeeRelatedResponse:
 	"""Метод для вывода информации пользователя по его ID"""
 	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
-	employee: Employee = await employee_repository.employee_profile(
+	employee: Optional[Employee] = await employee_repository.employee_profile(
 		session, employee_id)
+	if not employee:
+		raise rpc_exceptions.ObjectNotFoundError(data='No employee by this ID')
 	return EmployeeRelatedResponse.model_validate(
 		employee, from_attributes=True
 	)
@@ -95,9 +98,10 @@ async def update_profile_info(
 		employee: Employee = Depends(AuthenticationDependency()),
 ) -> EmployeeReadSchema:
 	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
-	employee: Employee = await employee_repository.update_employee(
+	edited_employee: Employee = await employee_repository.update_employee(
 		session,
 		Employee.id == employee.id,
 		**edited_info.model_dump()
 	)
-	return EmployeeReadSchema.model_validate(employee, from_attributes=True)
+	return EmployeeReadSchema.model_validate(
+		edited_employee, from_attributes=True)

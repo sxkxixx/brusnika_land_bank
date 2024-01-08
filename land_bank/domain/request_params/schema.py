@@ -1,6 +1,11 @@
-from typing import List, Optional, Literal
+from typing import List, Literal
 
 from pydantic import BaseModel, field_validator
+
+__all__ = [
+	'SortParams',
+	'LimitOffset'
+]
 
 ORDER_FIELDS: List[str] = [
 	'name',
@@ -11,8 +16,8 @@ ORDER_FIELDS: List[str] = [
 
 
 class SortParams(BaseModel):
-	fields: Optional[List[str]] = None
-	order: Optional[Literal['asc', 'desc']] = None
+	fields: List[str]
+	order: Literal['asc', 'desc']
 
 	@field_validator('order')
 	@classmethod
@@ -23,9 +28,7 @@ class SortParams(BaseModel):
 
 	@field_validator('fields')
 	@classmethod
-	def check_posible_sorting_fields(cls, fields: Optional[List[str]]):
-		if not fields:
-			return fields
+	def check_posible_sorting_fields(cls, fields: List[str]):
 		if all(field in ORDER_FIELDS for field in fields):
 			return fields
 		raise ValueError(
@@ -39,7 +42,7 @@ class LimitOffset(BaseModel):
 
 	@field_validator('offset', 'limit')
 	@classmethod
-	def validate(cls, field: int) -> int:
+	def validate_to_positive(cls, field: int) -> int:
 		if field < 0:
 			raise ValueError('Fields "offset" & "limit" must be gte 0')
 		return field

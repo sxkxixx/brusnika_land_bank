@@ -32,10 +32,11 @@ async def create_extra_data(
 		data: ExtraDataRequestSchema,
 ) -> ExtraDataResponseSchema:
 	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
-	data: ExtraAreaData = await extra_data_repository.create_data(
+	created_data: ExtraAreaData = await extra_data_repository.create_data(
 		session, **data.model_dump()
 	)
-	return ExtraDataResponseSchema.model_validate(data, from_attributes=True)
+	return ExtraDataResponseSchema.model_validate(created_data,
+												  from_attributes=True)
 
 
 @router.method(
@@ -55,10 +56,11 @@ async def edit_extra_data(
 	if not data_orm:
 		raise rpc_exceptions.ObjectNotFoundError(
 			data='Area extra data does not exists')
-	data_orm: ExtraAreaData = await extra_data_repository.update_data(
+	updated_data: ExtraAreaData = await extra_data_repository.update_data(
 		session, ExtraAreaData.id == extra_data_id, **data.model_dump()
 	)
-	return ExtraDataResponseSchema.model_validate(data_orm, from_attributes=True)
+	return ExtraDataResponseSchema.model_validate(updated_data,
+												  from_attributes=True)
 
 
 @router.method(

@@ -1,83 +1,106 @@
-from typing import Optional
+from typing import List, Optional
 from uuid import UUID
 from fastapi import Depends
 from fastapi_jsonrpc import Entrypoint
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from application.auth.dependency import AuthenticationDependency
 from domain.juristic_data.schemas import (
-	JuristicDataRelatedResponseDTO,
-	JuristicDataRequestDTO,
-	JuristicDataEditRequestDTO
+	LimitSchema,
+	PermittedUseSchema,
+	JuristicDataResponseDTO
 )
-from domain.juristic_data.service import JuristicDataService
+from infrastructure.database.model import (
+	LandArea,
+	LandAreaLimit,
+	LandAreaPermittedUse
+)
+from infrastructure.database.session import ASYNC_CONTEXT_SESSION
+from infrastructure.database.transaction import in_transaction
 from infrastructure.exception import rpc_exceptions
-from infrastructure.database.session import async_session_generator
-from infrastructure.database.model import JuristicData
+from storage.permitted_use import PermittedUseRepository
+from storage.limit import LimitRepository
+from storage.land_area import LandAreaRepository
 
 router = Entrypoint('/api/v1/juristic_data', tags=['JURISTIC DATA'])
-juristic_data_service: JuristicDataService = JuristicDataService()
+land_area_repository: LandAreaRepository = LandAreaRepository()
+limit_repository: LimitRepository = LimitRepository()
+permitted_use_repository: PermittedUseRepository = PermittedUseRepository()
 
 
 @router.method(
 	errors=[rpc_exceptions.AuthenticationError],
-	dependencies=[
-		Depends(AuthenticationDependency())
-	]
+	dependencies=[Depends(AuthenticationDependency())]
 )
-async def get_juristic_data_by_area_id(
+@in_transaction
+async def get_area_juristic_data(
+		land_area_id: UUID
+) -> JuristicDataResponseDTO:
+	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
+	land_area: LandArea = await land_area_repository.get_area_with_limits_uses(
+		session, land_area_id)
+	return JuristicDataResponseDTO.model_validate(
+		land_area, from_attributes=True
+	)
+
+
+@router.method(
+	errors=[rpc_exceptions.AuthenticationError],
+	dependencies=[Depends(AuthenticationDependency())]
+)
+@in_transaction
+async def get_juristic_options() -> JuristicDataResponseDTO:
+	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
+	limits = await limit_repository.select_all(session)
+	permitted_uses = await permitted_use_repository.select_all(session)
+	return JuristicDataResponseDTO(
+		limits=[
+			LimitSchema.model_validate(_limit, from_attributes=True)
+			for _limit in limits
+		],
+		permitted_uses=[
+			PermittedUseSchema.model_validate(use, from_attributes=True)
+			for use in permitted_uses
+		]
+	)
+
+
+@router.method(
+	errors=[rpc_exceptions.AuthenticationError],
+	dependencies=[Depends(AuthenticationDependency())]
+)
+@in_transaction
+async def update_area_juristic_data(
 		land_area_id: UUID,
-		session: AsyncSession = Depends(async_session_generator)
-) -> Optional[JuristicDataRelatedResponseDTO]:
-	juristic_data_service.set_async_session(session)
-	data: JuristicData = await juristic_data_service.get_by_land_area_id(
-		land_area_id)
-	if not data:
-		return None
-	return JuristicDataRelatedResponseDTO.model_validate(
-		data,
-		from_attributes=True
+		limits: List[LimitSchema],
+		permitted_uses: List[PermittedUseSchema]
+) -> JuristicDataResponseDTO:
+	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
+	land_area: Optional[LandArea] = await land_area_repository.get_record(
+		session, LandArea.id == land_area_id
 	)
-
-
-@router.method(
-	errors=[
-		rpc_exceptions.TransactionError,
-		rpc_exceptions.AuthenticationError
-	],
-	dependencies=[
-		Depends(AuthenticationDependency())
-	]
-)
-async def create_juristic_data(
-		data: JuristicDataRequestDTO,
-		session: AsyncSession = Depends(async_session_generator)
-) -> JuristicDataRelatedResponseDTO:
-	juristic_data_service.set_async_session(session)
-	data: JuristicData = await juristic_data_service.create_data(data)
-	return JuristicDataRelatedResponseDTO.model_validate(
-		data, from_attributes=True
+	if not land_area:
+		raise rpc_exceptions.ObjectNotFoundError(
+			data="No land area by this ID")
+	await limit_repository.delete_from_association(
+		session, LandAreaLimit.land_area_id == land_area_id)
+	await permitted_use_repository.delete_from_association(
+		session, LandAreaPermittedUse.land_area_id == land_area_id
 	)
-
-
-@router.method(
-	errors=[
-		rpc_exceptions.AuthenticationError,
-		rpc_exceptions.TransactionError
-	],
-	dependencies=[
-		# Depends(AuthenticationDependency())
-	]
-)
-async def update_juristic_data(
-		juristic_data_id: UUID,
-		data: JuristicDataEditRequestDTO,
-		session: AsyncSession = Depends(async_session_generator)
-) -> JuristicDataRelatedResponseDTO:
-	"""На данный момент работает с багом, не советую подключать"""
-	# TODO: Пофиксить
-	juristic_data_service.set_async_session(session)
-	data: JuristicData = await juristic_data_service.update_data(
-		juristic_data_id, data)
-	return JuristicDataRelatedResponseDTO.model_validate(
-		data, from_attributes=True)
+	limit_associations = await limit_repository.create_associations(
+		session, land_area_id, limits)
+	uses_associations = await permitted_use_repository.create_associations(
+		session, land_area_id, permitted_uses)
+	updated_land_area = await land_area_repository.get_land_area(
+		session,
+		filters=[
+			LandArea.id == land_area_id
+		],
+		options=[
+			selectinload(LandArea.limits),
+			selectinload(LandArea.permitted_uses)
+		]
+	)
+	return JuristicDataResponseDTO.model_validate(
+		updated_land_area, from_attributes=True)

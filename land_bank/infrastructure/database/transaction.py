@@ -1,5 +1,5 @@
 from fastapi_jsonrpc import BaseError
-from typing import Coroutine, Callable, Union
+from typing import Any, Callable
 from functools import wraps
 import logging
 
@@ -14,9 +14,9 @@ logging.basicConfig(
 )
 
 
-def in_transaction(func: Union[Coroutine, Callable]):
+def in_transaction(func: Callable):
 	@wraps(func)
-	async def wrapper(*args, **kwargs):
+	async def wrapper(*args, **kwargs) -> Any:
 		async_session: AsyncSession = get_async_session()
 		ASYNC_CONTEXT_SESSION.set(async_session)
 
@@ -26,7 +26,7 @@ def in_transaction(func: Union[Coroutine, Callable]):
 			f'Function Name: {func.__name__}'
 		)
 		try:
-			result = await func(*args, **kwargs)
+			result: Any = await func(*args, **kwargs)
 			await async_session.commit()
 			logging.info(f'Transaction success: {func.__name__}')
 			return result
@@ -34,13 +34,15 @@ def in_transaction(func: Union[Coroutine, Callable]):
 			logging.error(f'Transaction error: {type(BaseError)}')
 			await async_session.rollback()
 			raise rpc_error
-		except (IntegrityError, PendingRollbackError) as e:
+		except IntegrityError as e:
 			logging.error(
-				f'Transaction error: error type = {type(e)}, '
-				f'errors msg = {str(e)}')
+				f'Transaction error: error type = {type(e)}')
 			await async_session.rollback()
-			raise rpc_exceptions.TransactionError(data=str(e))
+			print(e.args)
+			raise rpc_exceptions.TransactionError(
+				data='Error while transaction executing')
 		finally:
 			await async_session.close()
 			logging.info(f'Session closed: {func.__name__}')
+
 	return wrapper

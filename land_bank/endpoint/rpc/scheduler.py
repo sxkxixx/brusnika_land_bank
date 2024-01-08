@@ -1,4 +1,4 @@
-from typing import Iterable, List
+from typing import Iterable, List, Optional
 from uuid import UUID
 
 from fastapi import Depends
@@ -40,10 +40,10 @@ async def create_land_area_task(
 		employee: Employee = Depends(AuthenticationDependency()),
 ) -> TaskRelatedResponseDTO:
 	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
-	task: LandAreaTask = await task_repository.create_task(
+	created_task: LandAreaTask = await task_repository.create_task(
 		session, **task.model_dump(), author_id=employee.id
 	)
-	return TaskRelatedResponseDTO.model_validate(task, from_attributes=True)
+	return TaskRelatedResponseDTO.model_validate(created_task, from_attributes=True)
 
 
 @router.method(
@@ -117,7 +117,7 @@ async def get_task_by_id(
 		task_id: UUID,
 ) -> TaskRelatedResponseDTO:
 	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
-	task: LandAreaTask = await task_repository.get_task_related(
+	task: Optional[LandAreaTask] = await task_repository.get_task_related(
 		session, task_id)
 	if not task:
 		raise rpc_exceptions.ObjectNotFoundError(data='No task by this id')

@@ -33,6 +33,9 @@ async def async_session_generator() -> AsyncGenerator[AsyncSession, None]:
 
 
 def get_async_session() -> AsyncSession:
+	"""
+	:return: Сессия
+	"""
 	return async_session()
 
 

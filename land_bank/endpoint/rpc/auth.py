@@ -13,8 +13,12 @@ from application.auth import (
 from application.message import PasswordResetMessage
 
 from domain.token import TokenResponseSchema
-from domain.employee import *
-from domain.email_message.schemas import *
+from domain.employee.schema import (
+	EmployeeCreateSchema, EmployeeReadSchema, EmployeeLoginSchema,
+)
+from domain.email_message.schemas import (
+	PasswordResetRequestDTO, PasswordResetResponseDTO
+)
 
 from infrastructure.celery import send_message
 from infrastructure.database.session import ASYNC_CONTEXT_SESSION
@@ -74,7 +78,7 @@ async def refresh_session(
 		user_agent: Annotated[str, Header()],
 		refresh_token: Annotated[str, Cookie()],
 ) -> TokenResponseSchema:
-	session: Optional[RefreshSession] = await redis_service.get_by_key(
+	session: Optional[RefreshSession] = await redis_service.get_by_key(  # type: ignore
 		refresh_token, RefreshSession)
 	if not session:
 		raise rpc_exceptions.AuthenticationError(
@@ -91,10 +95,10 @@ async def refresh_session(
 	await redis_service.delete_by_key(refresh_token)
 	access_token = TokenService(employee).get_access_token()
 	session = RefreshSession(employee.id, user_agent)
-	refresh_token: str = await redis_service.setex_entity(session)
+	updated_refresh_token: str = await redis_service.setex_entity(session)
 	expires = int((datetime.now() + session.time_to_leave()).timestamp())
 	response.set_cookie(
-		'refresh_token', refresh_token, expires=expires,
+		'refresh_token', updated_refresh_token, expires=expires,
 		httponly=True, path='/api/v1/auth'
 	)
 	return TokenResponseSchema(access_token=access_token)
@@ -107,7 +111,7 @@ async def logout(
 		refresh_token: Annotated[str, Cookie()],
 		user: Employee = Depends(AuthenticationDependency()),
 ) -> TokenResponseSchema:
-	session: Optional[RefreshSession] = await redis_service.get_by_key(
+	session: Optional[RefreshSession] = await redis_service.get_by_key(  # type: ignore
 		refresh_token, RefreshSession)
 	if not session:
 		raise rpc_exceptions.AuthenticationError(data='Already logout')
@@ -123,11 +127,13 @@ async def logout(
 
 
 @router.method(errors=[rpc_exceptions.AuthenticationError])
+@in_transaction
 async def get_password_reset_email_message(
 		data: PasswordResetRequestDTO,
 ) -> PasswordResetResponseDTO:
+	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
 	employee: Employee = await employee_repository.get_employee(
-		Employee.email == data.email
+		session, Employee.email == data.email
 	)
 	if not employee:
 		raise rpc_exceptions.ObjectNotFoundError(

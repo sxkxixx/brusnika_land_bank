@@ -1,5 +1,5 @@
 from uuid import UUID
-from typing import Iterable
+from typing import Iterable, List, Optional
 from fastapi import Depends
 import fastapi_jsonrpc as jsonrpc
 from sqlalchemy.orm import selectinload
@@ -7,8 +7,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.auth.dependency import AuthenticationDependency
 
-from domain.land_area.schema import *
-from domain.request_params.schema import *
+from domain.land_area.schema import (
+	LandAreaListResponseDTO,
+	LandAreaRequestDTO,
+	OwnerRequestDTO,
+	BuildingRequestDTO,
+	LandAreaRelatedResponseDTO,
+	OwnerResponseDTO,
+	BuildingResponseDTO,
+)
+from domain.request_params.schema import SortParams, LimitOffset
 
 from infrastructure.exception import rpc_exceptions
 from infrastructure.database.model import Building, LandArea, LandOwner
@@ -20,10 +28,7 @@ from storage.owner import OwnerRepository
 
 router = jsonrpc.Entrypoint(
 	path='/api/v1/areas',
-	tags=['AREAS'],
-	dependencies=[
-		Depends(AuthenticationDependency())
-	]
+	tags=['AREAS']
 )
 owner_repository: OwnerRepository = OwnerRepository()
 building_repository: BuildingRepository = BuildingRepository()
@@ -32,6 +37,9 @@ land_area_repository: LandAreaRepository = LandAreaRepository()
 
 @router.method(
 	errors=[rpc_exceptions.AuthenticationError],
+	dependencies=[
+		Depends(AuthenticationDependency())
+	]
 )
 @in_transaction
 async def select_land_area(
@@ -55,13 +63,17 @@ async def select_land_area(
 		rpc_exceptions.AuthenticationError,
 		rpc_exceptions.ObjectNotFoundError
 	],
+	dependencies=[
+		Depends(AuthenticationDependency())
+	]
 )
 @in_transaction
 async def get_land_area(
 		land_area_id: UUID
 ) -> LandAreaRelatedResponseDTO:
 	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
-	land_area: Optional[LandArea] = await land_area_repository.get_land_area_relations(
+	land_area: Optional[
+		LandArea] = await land_area_repository.get_land_area_relations(
 		session, land_area_id)
 	if not land_area:
 		raise rpc_exceptions.ObjectNotFoundError(
@@ -76,6 +88,9 @@ async def get_land_area(
 
 @router.method(
 	errors=[rpc_exceptions.AuthenticationError],
+	dependencies=[
+		Depends(AuthenticationDependency())
+	]
 )
 @in_transaction
 async def create_cadastral_land_area(
@@ -91,7 +106,7 @@ async def create_cadastral_land_area(
 	building_list: List[Building] = await building_repository.create_buildings(
 		session, land_area_orm.id, buildings
 	)
-	rel_land_area: LandArea = await land_area_repository.get_land_area(
+	rel_land_area: Optional[LandArea] = await land_area_repository.get_land_area(
 		session,
 		filters=[LandArea.id == land_area_orm.id],
 		options=[
@@ -110,6 +125,9 @@ async def create_cadastral_land_area(
 		rpc_exceptions.AuthenticationError,
 		rpc_exceptions.TransactionError
 	],
+	dependencies=[
+		Depends(AuthenticationDependency())
+	]
 )
 @in_transaction
 async def update_cadastral_land_area(
@@ -117,10 +135,13 @@ async def update_cadastral_land_area(
 		land_area: LandAreaRequestDTO,
 ) -> LandAreaRequestDTO:
 	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
-	land_area: LandArea = await land_area_repository.update_land_area(
+	updated_land_area: LandArea = await land_area_repository.update_land_area(
 		session, land_area_id, **land_area.model_dump()
 	)
-	return LandAreaRequestDTO.model_validate(land_area, from_attributes=True)
+	return LandAreaRequestDTO.model_validate(
+		updated_land_area,
+		from_attributes=True
+	)
 
 
 @router.method(
@@ -128,6 +149,9 @@ async def update_cadastral_land_area(
 		rpc_exceptions.TransactionError,
 		rpc_exceptions.AuthenticationError
 	],
+	dependencies=[
+		Depends(AuthenticationDependency())
+	]
 )
 @in_transaction
 async def update_owner(
@@ -145,6 +169,9 @@ async def update_owner(
 		rpc_exceptions.TransactionError,
 		rpc_exceptions.AuthenticationError
 	],
+	dependencies=[
+		Depends(AuthenticationDependency())
+	]
 )
 @in_transaction
 async def update_building(
@@ -163,6 +190,9 @@ async def update_building(
 		rpc_exceptions.TransactionError,
 		rpc_exceptions.AuthenticationError,
 	],
+	dependencies=[
+		Depends(AuthenticationDependency())
+	]
 )
 @in_transaction
 async def add_owner(
@@ -185,6 +215,9 @@ async def add_owner(
 		rpc_exceptions.TransactionError,
 		rpc_exceptions.AuthenticationError,
 	],
+	dependencies=[
+		Depends(AuthenticationDependency())
+	]
 )
 @in_transaction
 async def add_building(

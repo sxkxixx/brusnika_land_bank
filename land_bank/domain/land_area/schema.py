@@ -74,17 +74,29 @@ class LandAreaRequestDTO(BaseModel):
 	name: str
 	cadastral_number: str
 	area_category: str
+	cadastral_cost: Optional[float] = None
 	area_square: float
 	address: Optional[str]
 	search_channel: str
 	working_status: str = Field('Новый')
 	stage: str = Field('Поиск')
 
+	@field_validator('cadastral_cost')
+	@classmethod
+	def validate_positive_cost(cls, field: Optional[float]) -> float | None:
+		if field is None:
+			return field
+		if field <= 0:
+			raise ValueError('"cadastral_cost" must be gt 0.0')
+		return field
+
 	@field_validator('cadastral_number')
 	@classmethod
 	def cadastral_number_validator(cls, field: str) -> str:
-		if re.match("[0-9]{2}:[0-9]{2}:[0-9]{6,7}:[0-9]{1,6}", field):
-			return field
+		if re.match(
+				"[0-9]{2}:[0-9]{2}:[0-9]{6,7}:[0-9]{1,6}", field
+		) is None:
+			raise ValueError('"cadastral_number" is invalid')
 		return field
 
 	@field_validator('area_square')
