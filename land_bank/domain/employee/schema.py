@@ -35,11 +35,16 @@ class EmployeeLoginSchema(BaseModel):
 	email: EmailStr
 	password: str
 
+	@field_validator('email')
+	@classmethod
+	def email_lower(cls, field: str):
+		return field.lower()
+
 
 class EmployeeCreateSchema(EmployeeLoginSchema):
 	password_repeat: str
-	last_name: str
-	first_name: str
+	last_name: Optional[str] = None
+	first_name: Optional[str] = None
 	patronymic: Optional[str] = None
 	phone_number: Optional[str] = None
 
@@ -53,9 +58,7 @@ class EmployeeCreateSchema(EmployeeLoginSchema):
 	@classmethod
 	def validate_password_length(cls, field: str) -> str:
 		if len(field) < 8:
-			raise ValueError(
-				f'Password must be at least 8 symbols'
-			)
+			raise ValueError('Password must be at least 8 symbols')
 		return field
 
 	@field_validator('phone_number', mode='after')
@@ -75,7 +78,7 @@ class EmployeeCreateSchema(EmployeeLoginSchema):
 		mode='after'
 	)
 	@classmethod
-	def capitalize(cls, field: Union[str, None]):
+	def capitalize(cls, field: Union[str, None]) -> str | None:
 		if field is None:
 			return field
 		return field.capitalize()
@@ -84,8 +87,8 @@ class EmployeeCreateSchema(EmployeeLoginSchema):
 class EmployeeReadSchema(BaseModel):
 	id: UUID
 	email: EmailStr
-	last_name: str
-	first_name: str
+	last_name: Optional[str] = None
+	first_name: Optional[str] = None
 	patronymic: Optional[str] = None
 	phone_number: Optional[str] = None
 	s3_avatar_file: Optional[str] = None

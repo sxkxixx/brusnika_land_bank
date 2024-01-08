@@ -1,1 +1,1 @@
-from .session import redis
+from .session import redis, RedisObject, RedisService

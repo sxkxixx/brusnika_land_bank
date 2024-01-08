@@ -1,12 +1,14 @@
-from typing import Annotated, Optional
+from typing import Annotated, Dict, Optional
 from fastapi import Header
+from jose import JWTError
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.employee.service import EmployeeService
+from infrastructure.database.session import ASYNC_CONTEXT_SESSION
+from infrastructure.database.transaction import in_transaction
+from storage.employee import EmployeeRepository
 from .token import TokenService
 from infrastructure.database.model import Employee
-from infrastructure.database.session import async_session
 from infrastructure.exception import rpc_exceptions
-from jose import JWTError
 
 __all__ = [
 	'AuthenticationDependency',
@@ -14,9 +16,9 @@ __all__ = [
 ]
 
 
-def _get_token_payload(access_token: str) -> dict:
+def _get_token_payload(access_token: str) -> Dict:
 	try:
-		payload = TokenService.get_token_payload(access_token)
+		payload: Dict = TokenService.get_token_payload(access_token)
 	except JWTError as error:
 		raise rpc_exceptions.AuthenticationError(
 			data=f'Access Token has expired. {error.args}')
@@ -26,17 +28,17 @@ def _get_token_payload(access_token: str) -> dict:
 class AuthenticationDependency:
 	def __init__(self, is_strict: bool = True):
 		self.__is_strict: bool = is_strict
-		self.__employee_service: EmployeeService = EmployeeService()
-		self.__employee_service.set_async_session(async_session())
+		self.__repository: EmployeeRepository = EmployeeRepository()
 
 	async def __call__(
 			self,
-			authorization: Annotated[str, Header()] = None
+			authorization: Annotated[str, Header()]
 	):
 		if self.__is_strict:
 			return await self.__strict_auth(authorization)
 		return await self.__soft_auth(authorization)
 
+	@in_transaction
 	async def __strict_auth(
 			self,
 			access_token: str,
@@ -45,8 +47,8 @@ class AuthenticationDependency:
 			raise rpc_exceptions.AuthenticationError(
 				data='No access token there')
 		payload = _get_token_payload(access_token)
-		employee: Optional[Employee] = await self.__employee_service.get_employee(
-			Employee.email == payload.get('email')
+		employee: Optional[Employee] = await self.__repository.get_employee(
+			ASYNC_CONTEXT_SESSION.get(), Employee.email == payload.get('email')
 		)
 		if employee is None:
 			raise rpc_exceptions.AuthenticationError(
@@ -68,17 +70,22 @@ class AuthenticationDependency:
 class AuthorizationDependency:
 	def __init__(self, permission_name: str):
 		self.__permission_name = permission_name
-		self.__service: EmployeeService = EmployeeService()
-		self.__service.set_async_session(async_session())
+		self.__employee_repository: EmployeeRepository = EmployeeRepository()
 
+	@in_transaction
 	async def __call__(
 			self,
-			authorization: Annotated[str, Header()] = None,
+			authorization: Optional[Annotated[str, Header()]] = None,
 	):
-		payload = _get_token_payload(authorization)
-		employee: Employee = await (
-			self.__service.get_employee_with_permissions(
-				Employee.email == payload.get('email')))
+		if not authorization:
+			raise rpc_exceptions.AuthenticationError(
+				data='No access token there'
+			)
+		payload: Dict = _get_token_payload(authorization)
+		session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
+		employee: Optional[Employee] = await (
+			self.__employee_repository.get_employee_with_permissions(
+				session, Employee.email == payload.get('email')))
 		if employee is None:
 			raise rpc_exceptions.AuthenticationError(
 				data='Access Token is invalid')

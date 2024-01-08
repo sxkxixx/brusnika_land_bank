@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import (
 from infrastructure.settings import DatabaseSettings
 from typing import AsyncGenerator
 
-
 DATABASE_URL = (
 	f'postgresql+asyncpg://'
 	f'{DatabaseSettings.POSTGRES_USER}'
@@ -34,6 +33,9 @@ async def async_session_generator() -> AsyncGenerator[AsyncSession, None]:
 
 
 def get_async_session() -> AsyncSession:
+	"""
+	:return: Сессия
+	"""
 	return async_session()
 
 

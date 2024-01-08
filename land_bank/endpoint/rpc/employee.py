@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import Optional
 from uuid import UUID
 
 from fastapi import Depends
@@ -6,47 +7,54 @@ from fastapi_jsonrpc import Entrypoint
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.auth.dependency import AuthenticationDependency
-from domain.employee import (
-	EmployeeReadSchema, EmployeeRelatedResponse,
+from domain.employee.schema import (
+	EmployeeReadSchema,
+	EmployeeRelatedResponse,
 	ProfilePhotoResponseDTO,
 	EditProfileDTO
 )
-from domain.employee.service import EmployeeService
 from infrastructure.database.model import Employee
+from infrastructure.database.session import ASYNC_CONTEXT_SESSION
+from infrastructure.database.transaction import in_transaction
 from infrastructure.exception import rpc_exceptions
-from infrastructure.database.session import async_session_generator
 from infrastructure.aws.s3_storage import S3Storage
+from storage.employee import EmployeeRepository
 
-router = Entrypoint(path='/api/v1/usr', tags=['USER RPC'])
+router = Entrypoint(path='/api/v1/employee', tags=['USER RPC'])
 s3 = S3Storage()
-employee_service: EmployeeService = EmployeeService()
+employee_repository: EmployeeRepository = EmployeeRepository()
 
 
 @router.method(
 	errors=[rpc_exceptions.AuthenticationError],
 )
+@in_transaction
 async def get_profile(
 		employee: Employee = Depends(AuthenticationDependency()),
-		session: AsyncSession = Depends(async_session_generator)
 ) -> EmployeeRelatedResponse:
 	"""Профиль текущего пользователя"""
-	employee_service.set_async_session(session)
-	employee: Employee = await employee_service.get_full_profile(employee.id)
+	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
+	profile_data: Optional[Employee] = await employee_repository.employee_profile(
+		session, employee.id
+	)
 	return EmployeeRelatedResponse.model_validate(
-		employee, from_attributes=True)
+		profile_data, from_attributes=True)
 
 
 @router.method(
 	errors=[rpc_exceptions.AuthenticationError],
 	dependencies=[Depends(AuthenticationDependency())]
 )
+@in_transaction
 async def get_employee_profile_by_id(
 		employee_id: UUID,
-		session: AsyncSession = Depends(async_session_generator)
 ) -> EmployeeRelatedResponse:
 	"""Метод для вывода информации пользователя по его ID"""
-	employee_service.set_async_session(session)
-	employee: Employee = await employee_service.get_full_profile(employee_id)
+	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
+	employee: Optional[Employee] = await employee_repository.employee_profile(
+		session, employee_id)
+	if not employee:
+		raise rpc_exceptions.ObjectNotFoundError(data='No employee by this ID')
 	return EmployeeRelatedResponse.model_validate(
 		employee, from_attributes=True
 	)
@@ -56,16 +64,16 @@ async def get_employee_profile_by_id(
 	errors=[rpc_exceptions.AuthenticationError],
 	dependencies=[Depends(AuthenticationDependency())]
 )
+@in_transaction
 async def get_employee_profile_photo(
 		employee_id: UUID,
-		session: AsyncSession = Depends(async_session_generator)
 ) -> ProfilePhotoResponseDTO:
 	"""Возвращает ссылку на аватар пользователя по его ID"""
-	employee_service.set_async_session(session)
-	employee: Employee = await employee_service.get_employee(
-		Employee.id == employee_id)
+	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
+	employee: Employee = await employee_repository.get_employee(
+		session, Employee.id == employee_id)
 	if not employee:
-		raise rpc_exceptions.ObjectDoesNotExistsError(
+		raise rpc_exceptions.ObjectNotFoundError(
 			data='No user by this UUID'
 		)
 	if not employee.s3_avatar_file:
@@ -84,12 +92,16 @@ async def get_employee_profile_photo(
 		rpc_exceptions.TransactionError
 	]
 )
+@in_transaction
 async def update_profile_info(
 		edited_info: EditProfileDTO,
 		employee: Employee = Depends(AuthenticationDependency()),
-		session: AsyncSession = Depends(async_session_generator)
 ) -> EmployeeReadSchema:
-	employee_service.set_async_session(session)
-	employee: Employee = await employee_service.update_profile_info(
-		employee.id, **edited_info.model_dump())
-	return EmployeeReadSchema.model_validate(employee, from_attributes=True)
+	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
+	edited_employee: Employee = await employee_repository.update_employee(
+		session,
+		Employee.id == employee.id,
+		**edited_info.model_dump()
+	)
+	return EmployeeReadSchema.model_validate(
+		edited_employee, from_attributes=True)

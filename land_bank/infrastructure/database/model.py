@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional, TypeVar
+from typing import List, Optional, Type, TypeVar
 
 import sqlalchemy
 from uuid import UUID, uuid4
@@ -34,10 +34,10 @@ class Employee(Base):
 		sqlalchemy.String(length=128), nullable=False
 	)
 	last_name: Mapped[str] = mapped_column(
-		sqlalchemy.String(32), nullable=False
+		sqlalchemy.String(32), nullable=True
 	)
 	first_name: Mapped[str] = mapped_column(
-		sqlalchemy.String(32), nullable=False
+		sqlalchemy.String(32), nullable=True
 	)
 	patronymic: Mapped[str] = mapped_column(
 		sqlalchemy.String(32), nullable=True
@@ -178,6 +178,9 @@ class LandArea(Base):
 	area_category: Mapped[str] = mapped_column(
 		sqlalchemy.String(length=64), nullable=False,
 	)
+	cadastral_cost: Mapped[float] = mapped_column(
+		sqlalchemy.Double(), nullable=True
+	)
 	area_square: Mapped[float] = mapped_column(
 		sqlalchemy.Double, nullable=False,
 	)
@@ -219,6 +222,13 @@ class LandArea(Base):
 
 	extra_data: Mapped['ExtraAreaData'] = relationship(
 		'ExtraAreaData', back_populates='land_area'
+	)
+	
+	limits: Mapped[List['Limit']] = relationship(
+		secondary='land_area__limit', back_populates='land_area_list'
+	)
+	permitted_uses: Mapped[List['PermittedUse']] = relationship(
+		secondary='land_area__permitted_uses', back_populates='land_areas'
 	)
 
 
@@ -346,71 +356,38 @@ class Limit(Base):
 		sqlalchemy.String(length=64), nullable=False, unique=True
 	)
 
-	juristic_data_list: Mapped[List['JuristicData']] = relationship(
-		secondary='limit__juristic_data', back_populates='limits'
+	land_area_list: Mapped[List['LandArea']] = relationship(
+		secondary='land_area__limit', back_populates='limits'
 	)
 
 
-class JuristicDataLimit(Base):
-	"""Ассоциативная таблица для таблиц juristic_data и area_limits"""
+class LandAreaLimit(Base):
+	"""Ассоциативная таблица для таблиц cadastral_land_area и area_limits"""
 
-	__tablename__ = 'limit__juristic_data'
+	__tablename__ = 'land_area__limit'
 
 	limit_id: Mapped[UUID] = mapped_column(
 		sqlalchemy.ForeignKey('area_limits.id', ondelete='CASCADE'),
 		primary_key=True
 	)
-	juristic_data_id: Mapped[UUID] = mapped_column(
-		sqlalchemy.ForeignKey('juristic_data.id', ondelete='CASCADE'),
+	land_area_id: Mapped[UUID] = mapped_column(
+		sqlalchemy.ForeignKey('cadastral_land_area.id', ondelete='CASCADE'),
 		primary_key=True
 	)
 
 
-class JuristicData(Base):
-	"""Юридические сведения"""
+class LandAreaPermittedUse(Base):
+	"""Ассоциативная таблица для таблиц permitted_uses и cadastral_land_area"""
 
-	__tablename__ = 'juristic_data'
-
-	land_area_id: Mapped[UUID] = mapped_column(
-		sqlalchemy.ForeignKey('cadastral_land_area.id', ondelete='CASCADE'),
-		nullable=False, unique=True
-	)
-	buildings_count: Mapped[int] = mapped_column(
-		sqlalchemy.Integer, nullable=False, default=1
-	)
-	owners_count: Mapped[int] = mapped_column(
-		sqlalchemy.Integer
-	)
-	cadastral_cost: Mapped[float] = mapped_column(
-		sqlalchemy.Numeric(), nullable=False
-	)
-
-	limits: Mapped[List['Limit']] = relationship(
-		secondary='limit__juristic_data', back_populates='juristic_data_list'
-	)
-
-	permitted_use_list: Mapped[List['PermittedUse']] = relationship(
-		secondary='juristic_data__permitted_uses',
-		back_populates='juristic_data_pu_list'
-	)
-
-	land_area: Mapped['LandArea'] = relationship(
-		'LandArea', backref='juristic_data'
-	)
-
-
-class JuristicDataPermittedUse(Base):
-	"""Ассоциативная таблица для таблиц permitted_uses и juristic_data"""
-
-	__tablename__ = 'juristic_data__permitted_uses'
+	__tablename__ = 'land_area__permitted_uses'
 
 	permitted_use_id: Mapped[UUID] = mapped_column(
 		sqlalchemy.ForeignKey('permitted_uses.id', ondelete='CASCADE'),
 		primary_key=True
 	)
-	juristic_data_id: Mapped[UUID] = mapped_column(
-		sqlalchemy.ForeignKey('juristic_data.id', ondelete='CASCADE'),
-		primary_key=True
+	land_area_id: Mapped[UUID] = mapped_column(
+		sqlalchemy.ForeignKey('cadastral_land_area.id', ondelete='CASCADE'),
+		primary_key=True,
 	)
 
 
@@ -423,9 +400,9 @@ class PermittedUse(Base):
 		unique=True
 	)
 
-	juristic_data_pu_list: Mapped[List['JuristicData']] = relationship(
-		secondary='juristic_data__permitted_uses',
-		back_populates='permitted_use_list'
+	land_areas: Mapped[List['LandArea']] = relationship(
+		secondary='land_area__permitted_uses',
+		back_populates='permitted_uses'
 	)
 
 

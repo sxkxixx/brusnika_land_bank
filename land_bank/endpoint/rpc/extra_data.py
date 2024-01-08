@@ -1,3 +1,4 @@
+from typing import Optional
 from uuid import UUID
 
 from fastapi_jsonrpc import Entrypoint
@@ -9,13 +10,14 @@ from domain.extra_data.schemas import (
 	ExtraDataRequestSchema,
 	ExtraDataEditSchema
 )
-from domain.extra_data.service import ExtraDataService
 from infrastructure.database.model import ExtraAreaData
-from infrastructure.database.session import async_session_generator
+from infrastructure.database.transaction import in_transaction
+from infrastructure.database.session import ASYNC_CONTEXT_SESSION
 from infrastructure.exception import rpc_exceptions
+from storage.extra_data import ExtraDataRepository
 
 router = Entrypoint('/api/v1/extra_data', tags=['EXTRA DATA'])
-extra_data_service: ExtraDataService = ExtraDataService()
+extra_data_repository: ExtraDataRepository = ExtraDataRepository()
 
 
 # TODO: Настроить права для endpoint'ов
@@ -25,13 +27,16 @@ extra_data_service: ExtraDataService = ExtraDataService()
 		rpc_exceptions.AuthenticationError],
 	dependencies=[Depends(AuthenticationDependency())]
 )
+@in_transaction
 async def create_extra_data(
 		data: ExtraDataRequestSchema,
-		session: AsyncSession = Depends(async_session_generator)
 ) -> ExtraDataResponseSchema:
-	extra_data_service.set_async_session(session)
-	data: ExtraAreaData = await extra_data_service.create(**data.model_dump())
-	return ExtraDataResponseSchema.model_validate(data, from_attributes=True)
+	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
+	created_data: ExtraAreaData = await extra_data_repository.create_data(
+		session, **data.model_dump()
+	)
+	return ExtraDataResponseSchema.model_validate(created_data,
+												  from_attributes=True)
 
 
 @router.method(
@@ -40,13 +45,41 @@ async def create_extra_data(
 		rpc_exceptions.AuthenticationError],
 	dependencies=[Depends(AuthenticationDependency())]
 )
+@in_transaction
 async def edit_extra_data(
-		id: UUID,
+		extra_data_id: UUID,
 		data: ExtraDataEditSchema,
-		session: AsyncSession = Depends(async_session_generator)
 ) -> ExtraDataResponseSchema:
-	extra_data_service.set_async_session(session)
-	data: ExtraAreaData = await extra_data_service.update(
-		id, **data.model_dump()
+	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
+	data_orm: Optional[ExtraAreaData] = await extra_data_repository.get_data(
+		session, ExtraAreaData.id == extra_data_id)
+	if not data_orm:
+		raise rpc_exceptions.ObjectNotFoundError(
+			data='Area extra data does not exists')
+	updated_data: ExtraAreaData = await extra_data_repository.update_data(
+		session, ExtraAreaData.id == extra_data_id, **data.model_dump()
 	)
-	return ExtraDataResponseSchema.model_validate(data, from_attributes=True)
+	return ExtraDataResponseSchema.model_validate(updated_data,
+												  from_attributes=True)
+
+
+@router.method(
+	errors=[
+		rpc_exceptions.TransactionError,
+		rpc_exceptions.AuthenticationError
+	],
+	dependencies=[Depends(AuthenticationDependency())]
+)
+@in_transaction
+async def delete_extra_data(
+		extra_data_id: UUID
+) -> None:
+	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
+	data: Optional[ExtraAreaData] = await extra_data_repository.get_data(
+		session, ExtraAreaData.id == extra_data_id)
+	if not data:
+		raise rpc_exceptions.ObjectNotFoundError(
+			data='Area extra data does not exists'
+		)
+	await extra_data_repository.delete_data(session, data)
+	return None

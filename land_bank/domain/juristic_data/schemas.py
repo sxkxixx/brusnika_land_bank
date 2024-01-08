@@ -4,43 +4,22 @@ from typing import List
 from pydantic import BaseModel
 
 __all__ = [
-	'JuristicDataRelatedResponseDTO',
-	'JuristicDataRequestDTO',
-	'JuristicDataEditRequestDTO'
+	'LimitSchema',
+	'PermittedUseSchema',
+	'JuristicDataResponseDTO'
 ]
 
 
-class _LimitPermittedUseRequestSchema(BaseModel):
-	"""Схема созадния ограничения (обременения) и разрешенного пользования"""
-	name: str
-
-
-LimitRequestDTO = _LimitPermittedUseRequestSchema
-PermittedUseRequestDTO = _LimitPermittedUseRequestSchema
-
-
-class _LimitPermittedUseResponseSchema(_LimitPermittedUseRequestSchema):
+class _LimitPermittedUseResponseSchema(BaseModel):
 	"""Схема ответа ограничения (обременения) и разрешенного пользования"""
+	name: str
 	id: UUID
 
 
-LimitResponseDTO = _LimitPermittedUseResponseSchema
-PermittedUseResponseDTO = _LimitPermittedUseResponseSchema
+LimitSchema = _LimitPermittedUseResponseSchema
+PermittedUseSchema = _LimitPermittedUseResponseSchema
 
 
-class JuristicDataEditRequestDTO(BaseModel):
-	buildings_count: int
-	owners_count: int
-	cadastral_cost: float
-	limits: List['LimitResponseDTO']
-	permitted_use_list: List['PermittedUseResponseDTO']
-
-
-class JuristicDataRequestDTO(JuristicDataEditRequestDTO):
-	"""Схема для созадния юридической информации"""
-	land_area_id: UUID
-
-
-class JuristicDataRelatedResponseDTO(JuristicDataRequestDTO):
-	"""Схема ответа для юридической информации"""
-	id: UUID
+class JuristicDataResponseDTO(BaseModel):
+	limits: List[_LimitPermittedUseResponseSchema]
+	permitted_uses: List[_LimitPermittedUseResponseSchema]

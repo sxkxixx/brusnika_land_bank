@@ -1,93 +1,105 @@
-from datetime import datetime, timedelta
-from typing import Annotated
+from typing import Annotated, Optional
 import fastapi_jsonrpc as jsonrpc
+from datetime import datetime
 from fastapi import Depends, Header, Cookie, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from application.auth.dependency import AuthenticationDependency
-from application.auth.refresh import RefreshSession
-from application.auth.token import TokenService
+from application.auth import (
+	Hasher,
+	TokenService,
+	RefreshSession,
+	AuthenticationDependency
+)
 from application.message import PasswordResetMessage
-from domain.employee import *
-from domain.employee.service import EmployeeService
-from domain.email_message.schemas import *
-from domain.token import *
-from infrastructure.database.model import Employee
-from infrastructure.database.session import async_session_generator
-from infrastructure.exception import rpc_exceptions
-from infrastructure.settings import AppSettings
+
+from domain.token import TokenResponseSchema
+from domain.employee.schema import (
+	EmployeeCreateSchema, EmployeeReadSchema, EmployeeLoginSchema,
+)
+from domain.email_message.schemas import (
+	PasswordResetRequestDTO, PasswordResetResponseDTO
+)
+
 from infrastructure.celery import send_message
+from infrastructure.database.session import ASYNC_CONTEXT_SESSION
+from infrastructure.database.transaction import in_transaction
+from infrastructure.redis import RedisService
+from infrastructure.database.model import Employee
+from infrastructure.exception import rpc_exceptions
+from storage.employee import EmployeeRepository
 
 router = jsonrpc.Entrypoint(path='/api/v1/auth', tags=['AUTH'])
-employee_service: EmployeeService = EmployeeService()
+redis_service = RedisService()
+employee_repository: EmployeeRepository = EmployeeRepository()
 
 
 @router.method(errors=[rpc_exceptions.UniqueEmailError])
+@in_transaction
 async def register_user(
 		user: EmployeeCreateSchema,
-		session: AsyncSession = Depends(async_session_generator)
 ) -> EmployeeReadSchema:
-	employee_service.set_async_session(session)
-	employee: Employee = await employee_service.create_employee(
-		**user.model_dump())
+	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
+	employee: Employee = await employee_repository.create_user(
+		session, **user.model_dump())
 	return EmployeeReadSchema.model_validate(employee, from_attributes=True)
 
 
 @router.method(errors=[rpc_exceptions.LoginError])
+@in_transaction
 async def login_user(
-		login_data: EmployeeLoginSchema,
+		data: EmployeeLoginSchema,
 		user_agent: Annotated[str, Header()],
 		response: Response,
-		session: AsyncSession = Depends(async_session_generator),
 ) -> TokenResponseSchema:
-	employee_service.set_async_session(session)
-	employee: Employee = await employee_service.get_login_employee(
-		login_data.password,
-		Employee.email == login_data.email.lower()
-	)
+	try:
+		session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
+		employee: Employee = await employee_repository.get_employee(
+			session, Employee.email == data.email)
+	except rpc_exceptions.ObjectNotFoundError:
+		raise rpc_exceptions.LoginError(data="User does not exist")
+	if not Hasher.verify_password(data.password, employee.hashed_password):
+		raise rpc_exceptions.LoginError(data="Incorrect password")
 	access_token = TokenService(employee).get_access_token()
-	refresh_token = await RefreshSession(employee.id, user_agent).push()
-	ttl = int((datetime.now() + timedelta(
-		days=AppSettings.REFRESH_TOKEN_TTL_DAYS)).timestamp())
+	_refresh_session = RefreshSession(employee.id, user_agent)
+	refresh_token = await redis_service.setex_entity(_refresh_session)
+	expires = int(
+		(datetime.now() + _refresh_session.time_to_leave()).timestamp())
 	response.set_cookie(
-		'refresh_token',
-		refresh_token,
-		expires=ttl,
-		max_age=ttl,
-		httponly=True,
-		path='/api/v1/auth'
+		'refresh_token', refresh_token, expires=expires,
+		httponly=True, path='/api/v1/auth'
 	)
 	return TokenResponseSchema(access_token=access_token)
 
 
 @router.method(errors=[rpc_exceptions.AuthenticationError])
+@in_transaction
 async def refresh_session(
 		response: Response,
 		user_agent: Annotated[str, Header()],
 		refresh_token: Annotated[str, Cookie()],
-		database_session: AsyncSession = Depends(async_session_generator),
 ) -> TokenResponseSchema:
-	employee_service.set_async_session(database_session)
-	employee_session: RefreshSession = await RefreshSession.get_by_key(
-		refresh_token)
-	if employee_session.user_agent != user_agent:
+	session: Optional[RefreshSession] = await redis_service.get_by_key(  # type: ignore
+		refresh_token, RefreshSession)
+	if not session:
+		raise rpc_exceptions.AuthenticationError(
+			data='Session has expired, login again')
+	if session.user_agent != user_agent:
 		raise rpc_exceptions.AuthenticationError(
 			data='User-Agent is incorrect')
-	await employee_session.delete(refresh_token)
-	employee: Employee = await employee_service.get_employee(
-		Employee.id == employee_session.user_id
-	)
+	async_db_session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
+	employee: Employee = await employee_repository.get_employee(
+		async_db_session, Employee.id == session.user_id)
+	if not employee:
+		raise rpc_exceptions.AuthenticationError(
+			data='User not exists by this refresh token')
+	await redis_service.delete_by_key(refresh_token)
 	access_token = TokenService(employee).get_access_token()
-	ttl = int((datetime.now() + timedelta(
-		days=AppSettings.REFRESH_TOKEN_TTL_DAYS)).timestamp())
-	refresh_token = await RefreshSession(employee.id, user_agent).push()
+	session = RefreshSession(employee.id, user_agent)
+	updated_refresh_token: str = await redis_service.setex_entity(session)
+	expires = int((datetime.now() + session.time_to_leave()).timestamp())
 	response.set_cookie(
-		'refresh_token',
-		refresh_token,
-		expires=ttl,
-		max_age=ttl,
-		httponly=True,
-		path='/api/v1/auth'
+		'refresh_token', updated_refresh_token, expires=expires,
+		httponly=True, path='/api/v1/auth'
 	)
 	return TokenResponseSchema(access_token=access_token)
 
@@ -99,29 +111,32 @@ async def logout(
 		refresh_token: Annotated[str, Cookie()],
 		user: Employee = Depends(AuthenticationDependency()),
 ) -> TokenResponseSchema:
-	employee_session = await RefreshSession.get_by_key(refresh_token)
-	if employee_session.user_agent != user_agent:
+	session: Optional[RefreshSession] = await redis_service.get_by_key(  # type: ignore
+		refresh_token, RefreshSession)
+	if not session:
+		raise rpc_exceptions.AuthenticationError(data='Already logout')
+	if session.user_agent != user_agent:
 		raise rpc_exceptions.AuthenticationError(
 			data='User-Agent is incorrect')
-	if employee_session.user_id != user.id.__str__():
+	if session.user_id != str(user.id):
 		raise rpc_exceptions.AuthenticationError(
 			data='Refresh Token is stolen')
-	await employee_session.delete(refresh_token)
+	await redis_service.delete_by_key(refresh_token)
 	response.delete_cookie(refresh_token, httponly=True)
 	return TokenResponseSchema(access_token=None)
 
 
 @router.method(errors=[rpc_exceptions.AuthenticationError])
+@in_transaction
 async def get_password_reset_email_message(
 		data: PasswordResetRequestDTO,
-		session: AsyncSession = Depends(async_session_generator)
 ) -> PasswordResetResponseDTO:
-	employee_service.set_async_session(session)
-	employee: Employee = await employee_service.get_employee(
-		Employee.email == data.email
+	session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
+	employee: Employee = await employee_repository.get_employee(
+		session, Employee.email == data.email
 	)
 	if not employee:
-		raise rpc_exceptions.ObjectDoesNotExistsError(
+		raise rpc_exceptions.ObjectNotFoundError(
 			'No user by this email not exists'
 		)
 	message = PasswordResetMessage(
