@@ -12,6 +12,10 @@ class PermittedUseRepository:
 	def __init__(self):
 		self.__model = PermittedUse
 
+	async def create_permitted_use(self, session: AsyncSession, **values) -> PermittedUse:
+		statement = insert(PermittedUse).values(**values).returning(PermittedUse)
+		return await session.scalar(statement)
+
 	async def select_all(
 			self,
 			session: AsyncSession

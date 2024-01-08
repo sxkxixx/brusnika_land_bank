@@ -34,7 +34,7 @@ def in_transaction(func: Callable):
 			logging.error(f'Transaction error: {type(BaseError)}')
 			await async_session.rollback()
 			raise rpc_error
-		except IntegrityError as e:
+		except (IntegrityError, PendingRollbackError) as e:
 			logging.error(
 				f'Transaction error: error type = {type(e)}')
 			await async_session.rollback()

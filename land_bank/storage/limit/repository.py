@@ -12,6 +12,10 @@ class LimitRepository:
 	def __init__(self):
 		self.__model = Limit
 
+	async def create_limit(self, session: AsyncSession, **values) -> Limit:
+		statement = insert(Limit).values(**values).returning(Limit)
+		return await session.scalar(statement)
+
 	async def select_all(
 			self,
 			session: AsyncSession
