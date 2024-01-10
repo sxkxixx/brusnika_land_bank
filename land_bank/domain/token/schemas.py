@@ -1,9 +1,9 @@
 from pydantic import BaseModel
 
 __all__ = [
-	'TokenResponseSchema'
+    'TokenResponseSchema'
 ]
 
 
 class TokenResponseSchema(BaseModel):
-	access_token: str | None
+    access_token: str | None
