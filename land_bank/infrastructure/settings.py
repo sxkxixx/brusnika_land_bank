@@ -4,6 +4,16 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+__all__ = [
+    'DatabaseSettings',
+    'AppSettings',
+    'SMTPSettings',
+    'AMQPSettings',
+    'S3Settings',
+    'RedisSettings',
+    'TestDatabaseSettings'
+]
+
 
 class DatabaseSettings:
     # Database config
@@ -24,6 +34,7 @@ class AppSettings:
 
     # CORS
     FRONTEND_HOST: str = os.getenv('FRONTEND_HOST', '')
+    TESTING_APP: bool = bool(os.getenv('TESTING_APP', False))
 
 
 class RedisSettings:
@@ -52,3 +63,22 @@ class SMTPSettings:
 class AMQPSettings:
     AMQP_HOST: str = os.getenv('AMQP_HOST', '')
     AMQP_PORT: str = os.getenv('AMQP_PORT', '')
+
+
+class TestDatabaseSettings:
+    TEST_DB: str = os.getenv('TEST_DB', 'postgres')
+    TEST_HOST: str = os.getenv('TEST_HOST', 'localhost')
+    TEST_PORT: int = int(os.getenv('TEST_PORT', 5432))
+    TEST_USER: str = os.getenv('TEST_USER', 'root')
+    TEST_PASSWORD: str = os.getenv('TEST_PASSWORD', '')
+
+    @classmethod
+    def url(cls) -> str:
+        return (
+            f'postgresql+asyncpg://'
+            f'{cls.TEST_USER}'
+            f':{cls.TEST_PASSWORD}'
+            f'@{cls.TEST_HOST}'
+            f':{cls.TEST_PORT}'
+            f'/{cls.TEST_DB}'
+        )

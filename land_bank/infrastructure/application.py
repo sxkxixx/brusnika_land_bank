@@ -75,6 +75,6 @@ def create_app(
     for api_router in rest_entrypoints:
         app.include_router(api_router)
 
-    asyncio.create_task(init_database_variables())
+    # asyncio.create_task(init_database_variables())
 
     return app
