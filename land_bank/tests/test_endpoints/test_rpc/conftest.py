@@ -1,9 +1,14 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Union
+from typing import Optional
 
 import pytest
+from asgi_lifespan import LifespanManager
+from fastapi import FastAPI
+from fastapi_jsonrpc import API
+from httpx import AsyncClient
 
 from domain.employee import EmployeeCreateSchema, EmployeeLoginSchema
-from tests.conftest import RequestSender
+from main import app
 
 TEST_USER_SCHEMA = EmployeeCreateSchema(
     email='test@mail.ru', password='password', password_repeat='password'
@@ -15,6 +20,30 @@ LOGIN_SCHEMA = EmployeeLoginSchema(
 AUTH_APP_URL = 'http://localhost:8000/api/v1/auth'
 REGISTER_USER_METHOD: str = "register_user"
 LOGIN_USER_METHOD: str = "login_user"
+
+
+class RequestSender:
+    _Body = Dict[str, Any]
+
+    def __init__(self, _app: Union[FastAPI, API] = app):
+        self.app = _app
+
+    async def __call__(self, url: str, json_body: _Body) -> _Body:
+        """
+        Отправляет Post запрос
+        :param url: URL адрес эндпоинта
+        :param json_body: Тело запроса
+        :return: Ответ от сервера
+        """
+        async with LifespanManager(app=self.app):
+            async with AsyncClient(app=self.app) as async_client:
+                response = await async_client.post(url=url, json=json_body)
+        return response.json()
+
+
+@pytest.fixture(scope='module')
+def request_sender() -> RequestSender:
+    return RequestSender(app)
 
 
 class RPCRequest:
@@ -55,8 +84,6 @@ async def jwt_token(
     )
     response = await request_sender(
         AUTH_APP_URL,
-        json_body=rpc_request.get_request_body(
-            LOGIN_USER_METHOD,
-        )
+        json_body=rpc_request.get_request_body(LOGIN_USER_METHOD)
     )
     return response.get('result', {}).get('access_token')

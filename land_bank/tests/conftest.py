@@ -78,27 +78,3 @@ async def drop_tables(_engine: _TypeEngine, session: AsyncSession) -> None:
     Base.metadata.drop_all(_engine)  # type: ignore
     await session.commit()
     logging.info("Tables are dropped")
-
-
-class RequestSender:
-    _Body = Dict[str, Any]
-
-    def __init__(self, _app: Union[FastAPI, API] = app):
-        self.app = _app
-
-    async def __call__(self, url: str, json_body: _Body) -> _Body:
-        """
-        Отправляет Post запрос
-        :param url: URL адрес эндпоинта
-        :param json_body: Тело запроса
-        :return: Ответ от сервера
-        """
-        async with LifespanManager(app=self.app):
-            async with AsyncClient(app=self.app) as async_client:
-                response = await async_client.post(url=url, json=json_body)
-        return response.json()
-
-
-@pytest.fixture(scope='session')
-def request_sender() -> RequestSender:
-    return RequestSender(app)
