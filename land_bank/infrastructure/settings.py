@@ -57,7 +57,7 @@ class SMTPSettings:
     EMAIL: str = os.getenv('SMTP_EMAIL', '')
     PASSWORD: str = os.getenv('SMTP_PASSWORD', '')
     HOST: str = os.getenv('SMTP_SERVER', '')
-    PORT: int = int(os.getenv('SMTP_PORT', ''))
+    PORT: int = int(os.getenv('SMTP_PORT', 0))
 
 
 class AMQPSettings:
