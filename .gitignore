@@ -2,3 +2,4 @@
 **/__pycache__
 *.env*
 land_bank/migrations/versions/*.py
+land_bank/tests
