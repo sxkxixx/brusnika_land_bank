@@ -134,9 +134,10 @@ async def update_cadastral_land_area(
         land_area: LandAreaRequestDTO,
 ) -> LandAreaRequestDTO:
     session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
-    updated_land_area: LandArea = await land_area_repository.update_land_area(
-        session, land_area_id, **land_area.model_dump()
-    )
+    updated_land_area: Optional[LandArea] = await (
+        land_area_repository.update_land_area(
+            session, land_area_id, **land_area.model_dump()
+        ))
     return LandAreaRequestDTO.model_validate(
         updated_land_area,
         from_attributes=True
@@ -158,7 +159,7 @@ async def update_owner(
         owner: OwnerRequestDTO,
 ) -> OwnerResponseDTO:
     session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
-    orm_owner: LandOwner = await owner_repository.update_record(
+    orm_owner: Optional[LandOwner] = await owner_repository.update_owner(
         session, owner_id, **owner.model_dump())
     return OwnerResponseDTO.model_validate(orm_owner, from_attributes=True)
 
@@ -178,7 +179,8 @@ async def update_building(
         building: BuildingRequestDTO,
 ) -> BuildingResponseDTO:
     session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
-    orm_building: Building = await building_repository.update_building(
+    orm_building: Optional[
+        Building] = await building_repository.update_building(
         session, building_id, **building.model_dump())
     return BuildingResponseDTO.model_validate(
         orm_building, from_attributes=True)

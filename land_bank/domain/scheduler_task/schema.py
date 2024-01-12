@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 
 from pydantic import BaseModel, field_validator, Field
@@ -15,6 +15,8 @@ __all__ = [
     'TaskResponseDTO',
     'TaskEditRequestDTO'
 ]
+
+from domain.task_comment.schema import TaskCommentRelatedRequestDTO
 
 
 class TaskEditRequestDTO(BaseModel):
@@ -58,6 +60,8 @@ class TaskRelatedResponseDTO(TaskResponseDTO):
     executor: 'ShortEmployeeResponseDTO'
     author: 'ShortEmployeeResponseDTO'
     land_area: 'ShortLandAreaResponseDTO'
+
+    task_comments: List['TaskCommentRelatedRequestDTO']
 
 
 class SchedulerTaskResponseDTO(TaskResponseDTO):

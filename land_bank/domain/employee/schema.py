@@ -116,8 +116,8 @@ class EmployeeRelatedResponse(EmployeeReadSchema):
 class ShortEmployeeResponseDTO(BaseModel):
     id: UUID
     email: EmailStr
-    last_name: str
-    first_name: str
+    last_name: Optional[str] = None
+    first_name: Optional[str] = None
 
 
 class ProfilePhotoResponseDTO(BaseModel):

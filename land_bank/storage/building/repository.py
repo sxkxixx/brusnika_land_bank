@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -42,7 +42,7 @@ class BuildingRepository(SQLAlchemyRepository):
             session: AsyncSession,
             building_id: UUID,
             **values_set
-    ) -> Building:
+    ) -> Optional[Building]:
         return await self.update_record(
             session,
             Building.id == building_id,

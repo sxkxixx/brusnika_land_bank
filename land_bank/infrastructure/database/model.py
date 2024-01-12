@@ -343,6 +343,39 @@ class LandAreaTask(Base):
         'LandArea', back_populates='tasks'
     )
 
+    task_comments: Mapped[List['TaskComment']] = relationship(
+        'TaskComment', back_populates='task'
+    )
+
+
+class TaskComment(Base):
+    """
+    Комментарий к задаче
+    """
+    __tablename__ = 'task_comments'
+
+    task_id: Mapped[UUID] = mapped_column(
+        sqlalchemy.ForeignKey('land_area_tasks.id', ondelete='CASCADE'),
+        nullable=False
+    )
+    employee_id: Mapped[UUID] = mapped_column(
+        sqlalchemy.ForeignKey('land_bank_employee.id', ondelete='CASCADE'),
+        nullable=False
+    )
+    text: Mapped[str] = mapped_column(
+        sqlalchemy.String(length=128), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        sqlalchemy.DateTime, default=datetime.now
+    )
+
+    task: Mapped[LandAreaTask] = relationship(
+        'LandAreaTask', back_populates='task_comments'
+    )
+    employee: Mapped[Employee] = relationship(
+        'Employee', backref='employee_task_comments'
+    )
+
 
 # Дополнительная информация и юридические сведения по Земельным участкам
 # Связь m2m

@@ -1,6 +1,6 @@
 from typing import Iterable, List, Optional, Type
 
-from sqlalchemy import Executable, insert, select, update
+from sqlalchemy import Executable, insert, select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from infrastructure.database.model import DatabaseEntity
@@ -142,8 +142,11 @@ class SQLAlchemyRepository(Repository):
         :param options: Параметры подгрузки отношений
         :return:
         """
-        statement: Executable = select(self.__model).where(*filters).options(
-            *options)
+        statement: Executable = (
+            select(self.__model)
+            .where(*filters)
+            .options(*options)
+        )
         return await session.scalar(statement)
 
     async def delete_record(
@@ -151,4 +154,4 @@ class SQLAlchemyRepository(Repository):
             session: AsyncSession,
             instance: 'DatabaseEntity'
     ) -> None:
-        await self.delete_record(session, instance)
+        await session.delete(instance)

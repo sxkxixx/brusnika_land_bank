@@ -76,7 +76,7 @@ class LandAreaRepository(SQLAlchemyRepository):
             session: AsyncSession,
             land_area_id: UUID,
             **values_set
-    ) -> LandArea | None:
+    ) -> Optional[LandArea]:
         return await self.update_record(
             session,
             LandArea.id == land_area_id,

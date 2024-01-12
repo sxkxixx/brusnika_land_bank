@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -41,7 +41,7 @@ class OwnerRepository(SQLAlchemyRepository):
             session: AsyncSession,
             owner_id: UUID,
             **values_set
-    ) -> LandOwner:
+    ) -> Optional[LandOwner]:
         return await self.update_record(
             session,
             LandOwner.id == owner_id,

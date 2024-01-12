@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from infrastructure.database.model import LandAreaTask
+from infrastructure.database.model import LandAreaTask, TaskComment
 from infrastructure.repository.sqlalchemy_repository import SQLAlchemyRepository
 
 __all__ = [
@@ -21,7 +21,10 @@ class LandAreaTaskRepository(SQLAlchemyRepository):
             session: AsyncSession,
             **kwargs
     ) -> LandAreaTask:
-        return await self.create_record(session, **kwargs)
+        land_area_task: LandAreaTask = await self.create_record(
+            session, **kwargs
+        )
+        return await self.get_task_related(session, land_area_task.id)
 
     async def update_task(
             self,
@@ -70,7 +73,12 @@ class LandAreaTaskRepository(SQLAlchemyRepository):
             options=[
                 selectinload(LandAreaTask.executor),
                 selectinload(LandAreaTask.author),
-                selectinload(LandAreaTask.land_area)
+                selectinload(LandAreaTask.land_area),
+                selectinload(
+                    LandAreaTask.task_comments
+                ).selectinload(
+                    TaskComment.employee
+                )
             ]
         )
 
