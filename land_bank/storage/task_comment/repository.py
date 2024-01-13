@@ -2,6 +2,7 @@ from typing import Optional
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from infrastructure.database.model import TaskComment
 from infrastructure.repository.sqlalchemy_repository import SQLAlchemyRepository
@@ -16,7 +17,8 @@ class TaskCommentRepository(SQLAlchemyRepository):
             session: AsyncSession,
             **values_set
     ) -> TaskComment:
-        return await self.create_record(session, **values_set)
+        comment: TaskComment = await self.create_record(session, **values_set)
+        return await self.get_comment_with_employee(session, comment.id)
 
     async def get_task_comment(
             self,
@@ -36,7 +38,7 @@ class TaskCommentRepository(SQLAlchemyRepository):
         return await self.get_record_with_relationships(
             session,
             filters=[TaskComment.id == comment_id],
-            options=[TaskComment.employee]
+            options=[selectinload(TaskComment.employee)]
         )
 
     async def delete_task_comment(

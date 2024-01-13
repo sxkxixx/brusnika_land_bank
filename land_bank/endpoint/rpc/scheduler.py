@@ -16,7 +16,7 @@ from domain.scheduler_task.schema import (
 )
 from domain.task_comment.schema import (
     TaskCommentRequestDTO,
-    TaskCommentResponseDTO
+    TaskCommentResponseDTO, TaskCommentRelatedRequestDTO
 )
 from infrastructure.database.model import Employee, LandAreaTask, TaskComment
 from infrastructure.database.session import ASYNC_CONTEXT_SESSION
@@ -181,7 +181,7 @@ async def change_task_status(
 async def add_task_comment(
         comment: TaskCommentRequestDTO,
         employee: Employee = Depends(AuthenticationDependency()),
-) -> TaskCommentResponseDTO:
+) -> TaskCommentRelatedRequestDTO:
     session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
     if not await task_repository.is_task_exists(
             session, LandAreaTask.id == comment.task_id):
@@ -189,7 +189,7 @@ async def add_task_comment(
     orm_comment: TaskComment = await task_comment_repository.create_comment(
         session, **comment.model_dump(), employee_id=employee.id
     )
-    return TaskCommentResponseDTO.model_validate(
+    return TaskCommentRelatedRequestDTO.model_validate(
         orm_comment, from_attributes=True
     )
 
