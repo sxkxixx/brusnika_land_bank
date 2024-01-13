@@ -60,7 +60,7 @@ class LandAreaTaskRepository(SQLAlchemyRepository):
         return await self.select_records(
             session,
             filters=[LandAreaTask.land_area_id == land_area_id],
-            options=[LandAreaTask.executor]
+            options=[selectinload(LandAreaTask.executor)]
         )
 
     async def get_task_related(
