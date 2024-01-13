@@ -5,7 +5,10 @@ from fastapi_jsonrpc import Entrypoint
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.auth.dependency import AuthenticationDependency
-from domain.area_comment import AreaCommentRequestDTO, AreaCommentResponseDTO
+from domain.area_comment import (
+    AreaCommentRequestDTO,
+    AreaCommentRelatedResponseDTO
+)
 from infrastructure.database.model import AreaComment, Employee
 from infrastructure.database.session import ASYNC_CONTEXT_SESSION
 from infrastructure.database.transaction import in_transaction
@@ -29,12 +32,12 @@ area_comment_repository = AreaCommentRepository()
 async def upload_area_comment(
         comment: AreaCommentRequestDTO,
         employee: Employee = Depends(AuthenticationDependency()),
-) -> AreaCommentResponseDTO:
+) -> AreaCommentRelatedResponseDTO:
     session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
     area_comment: AreaComment = await area_comment_repository.create_comment(
         session, employee_id=employee.id, **comment.model_dump()
     )
-    return AreaCommentResponseDTO.model_validate(
+    return AreaCommentRelatedResponseDTO.model_validate(
         area_comment,
         from_attributes=True
     )
@@ -51,7 +54,7 @@ async def edit_area_comment(
         comment_id: UUID,
         comment_text: str,
         employee: Employee = Depends(AuthenticationDependency()),
-) -> AreaCommentResponseDTO:
+) -> AreaCommentRelatedResponseDTO:
     session: AsyncSession = ASYNC_CONTEXT_SESSION.get()
     comment: AreaComment = await area_comment_repository.get_comment(
         session, AreaComment.id == comment_id
@@ -62,7 +65,7 @@ async def edit_area_comment(
     area_comment = await area_comment_repository.edit_comment(
         session, comment.id, comment_text=comment_text
     )
-    return AreaCommentResponseDTO.model_validate(
+    return AreaCommentRelatedResponseDTO.model_validate(
         area_comment,
         from_attributes=True
     )

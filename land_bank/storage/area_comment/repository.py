@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from infrastructure.database.model import AreaComment
 from infrastructure.repository.sqlalchemy_repository import SQLAlchemyRepository
@@ -26,7 +27,13 @@ class AreaCommentRepository(SQLAlchemyRepository):
             session: AsyncSession,
             **values_set
     ) -> AreaComment:
-        return await self.create_record(session, **values_set)
+        comment: AreaComment = await self.create_record(
+            session, **values_set)
+        return await self.get_record_with_relationships(
+            session,
+            filters=[AreaComment.id == comment.id],
+            options=[selectinload(AreaComment.employee)]
+        )
 
     async def edit_comment(
             self,
@@ -41,10 +48,12 @@ class AreaCommentRepository(SQLAlchemyRepository):
         :param values_set: Обновленные значения для комментария
         :return: Обновленный комментарий
         """
-        return await self.update_record(
+        updated_comment: AreaComment = await self.update_record(
+            session, AreaComment.id == comment_id, **values_set)
+        return await self.get_record_with_relationships(
             session,
-            AreaComment.id == comment_id,
-            **values_set
+            filters=[AreaComment.id == updated_comment.id],
+            options=[selectinload(AreaComment.employee)]
         )
 
     async def delete_comment(
