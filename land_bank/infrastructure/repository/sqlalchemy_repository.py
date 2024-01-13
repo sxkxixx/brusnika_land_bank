@@ -1,6 +1,6 @@
 from typing import Iterable, List, Optional, Type
 
-from sqlalchemy import Executable, insert, select, update, delete
+from sqlalchemy import Executable, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from infrastructure.database.model import DatabaseEntity

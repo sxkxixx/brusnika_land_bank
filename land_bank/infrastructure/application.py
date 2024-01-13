@@ -1,4 +1,3 @@
-import asyncio
 from typing import Iterable, List
 
 from fastapi import APIRouter
