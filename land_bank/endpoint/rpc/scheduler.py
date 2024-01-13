@@ -16,7 +16,7 @@ from domain.scheduler_task.schema import (
 )
 from domain.task_comment.schema import (
     TaskCommentRequestDTO,
-    TaskCommentResponseDTO, TaskCommentRelatedRequestDTO
+    TaskCommentRelatedRequestDTO
 )
 from infrastructure.database.model import Employee, LandAreaTask, TaskComment
 from infrastructure.database.session import ASYNC_CONTEXT_SESSION
